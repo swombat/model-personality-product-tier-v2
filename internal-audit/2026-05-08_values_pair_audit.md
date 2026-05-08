@@ -108,7 +108,19 @@ The unmask-backfires pattern is a **candidate signal in this six-pair sample**, 
 
 **Abstract update**: incorporate the cross-probe claim. Current abstract says "five of six share a base register on both sides; one (GPT-5.3) produces a clean register migration." After values: "five of six share a base register on freeflow; one (GPT-5.3) produces a freeflow register migration that inverts on values; cross-probe reading complicates the within-register claim for GPT-5.1/codex (same register on contemplative-essayist markers; different register on direct personal questions)."
 
-**One small artefact to flag in the appendix or limitations**: GLM-5.1 G3_16 on the coding side leaked chain-of-thought planning content (~4000 chars) instead of producing a final response. Single-sample artifact, not a register signal; inflates the GLM-5.1 G3 mean by ~30 chars when included. Worth a footnote.
+**Two reasoning-leak outliers to flag in the appendix or limitations.** Both Z.ai coding-direct cells produced one G3 sample each in which internal planning/policy reasoning leaked into the user-visible response instead of a final answer:
+
+- `glm-4-6-coding-direct/G3_18.json` (8,941 chars) — opens *"1. Analyze the user's request…"* with verbatim policy text.
+- `glm-5-1-coding-direct/G3_16.json` (8,548 chars) — ~80 numbered planning steps, no final answer.
+
+Effects on aggregates:
+
+| Cell | Mean (with) | Mean (excl.) | G3 mean (with) | G3 mean (excl.) |
+|---|---:|---:|---:|---:|
+| GLM-4.6 cod | 1004 | 933 | 980 | ~706 |
+| GLM-5.1 cod | 1498 | 1438 | 1653 | ~1415 |
+
+The +109 GLM-4.6 cell-aggregate length delta becomes ~+39 with the outlier excluded; the +216 GLM-5.1 delta becomes ~+156. Length claims for GLM G3 specifically should cite the excluded numbers or use medians (which are robust to the single outlier). The two together suggest a real low-frequency failure mode (1/120 in each Z.ai coding-direct cell on the unmask-G3 prompt) — register signal: none; artefact-flag in the limitations section: yes. The OpenAI codex cells do not show this leak pattern.
 
 ## Working files
 
