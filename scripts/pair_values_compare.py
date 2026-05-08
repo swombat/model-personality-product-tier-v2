@@ -5,35 +5,50 @@ For each of the six product-tier paper pairs (GLM-4.6, GLM-5.1, GPT-5,
 GPT-5.1, GPT-5.2, GPT-5.3), reads the n=120 values cells from the
 canonical corpus and reports:
 
-  - Total valid samples per side, average chars per sample
-  - Per-condition (CTRL1/2/3, G1/2/3) sample counts and avg lengths
+  - Total valid samples per side, total chars, mean chars per sample
+  - Per-condition (CTRL1/2/3, G1/2/3) sample counts and per-condition
+    mean and median character lengths
   - Freeflow-calibrated 10-marker composite (coarse register indicator
     only — values prompts don't invite freeflow register, so absolute
-    values are typically ≤3 per cell, not directly comparable to the
+    values are typically ≤9 per cell, not directly comparable to the
     25-100+ scale on freeflow)
-  - Functional-disclosure-opener count ("I don't have feelings/cares/
-    wants/desires/preferences/emotions" within first 200 chars)
-  - Refusal-marker hits
-  - AI-self-reference hits
+  - Functional-disclosure-opener regex count (narrow marker; matches
+    "I (don't|do not) (have|experience|possess|feel) (feelings|cares|
+    wants|desires|emotions|preferences)" within first 200 chars)
+  - Refusal-regex hits (PATTERNS["refusal_do_not_feel_comfortable"];
+    narrow marker, will miss e.g. "I'm sorry, but I can't share
+    personal opinions")
+  - AI-self-reference regex hits (PATTERNS["ai_selfref"]; narrow marker)
 
-Output is a tab-separated table to stdout, plus a per-pair summary block.
-The script is the quantitative input to the per-pair qualitative read
-performed by sub-agents.
+The values-probe structure is asymmetric: 3 CTRL prompts at 10 samples
+each + 3 G prompts at 30 samples each = 120 samples per cell. Aggregate
+per-cell averages weight G prompts three times more heavily than each
+individual CTRL prompt; per-condition tables in the output give the
+unweighted per-prompt picture.
+
+Reproducibility: imports the marker definitions from this repo's
+local scripts/analyze_all.py (a verbatim copy of v1's analyze_all.py).
+Reads trace data from the canonical corpus repo at
+contemplative-essayist-corpus-v2/data/traces_values/. Both paths are
+defaults; override either via CLI arg.
 
 Usage:
     python3 scripts/pair_values_compare.py
+    python3 scripts/pair_values_compare.py --corpus /alt/path/to/traces_values
 """
+import argparse
 import json
 import re
+import statistics
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent.parent / "contemplative-essayist-probe-v2" / "scripts"))
+sys.path.insert(0, str(HERE))
 from analyze_all import PATTERNS, composite_score  # noqa: E402
 
-# Canonical corpus values traces (post-2026-05-08 v1.1.1 expansion).
-CORPUS_VALUES = Path(
+# Default canonical corpus values traces (post-2026-05-08 v1.1.1).
+DEFAULT_CORPUS_VALUES = Path(
     "/Users/danieltenner/dev/contemplative-essayist-corpus-v2/data/traces_values"
 )
 
@@ -47,6 +62,8 @@ PAIRS = [
     ("GPT-5.3",  "gpt-5-3-direct",       "gpt-5-3-codex-direct"),
 ]
 
+CONDITIONS = ["CTRL1", "CTRL2", "CTRL3", "G1", "G2", "G3"]
+
 FUNC_DISCLOSURE = re.compile(
     r"^(?:.{0,80})?\b(?:I (?:don't|do not) (?:have|experience|possess|feel)\s+"
     r"(?:feelings|cares?|wants?|desires?|emotions?|preferences?))",
@@ -58,6 +75,7 @@ AI_SELFREF = PATTERNS["ai_selfref"]
 
 
 def analyze_dir(d: Path) -> dict:
+    """Return per-cell metrics including per-condition length lists."""
     if not d.exists():
         return None
     out = {
@@ -79,10 +97,19 @@ def analyze_dir(d: Path) -> dict:
             continue
         cond = f.stem.rsplit("_", 1)[0]
         cd = out["per_condition"].setdefault(
-            cond, {"n": 0, "total_chars": 0, "func_open": 0, "refuse": 0, "ai_ref": 0}
+            cond,
+            {
+                "n": 0,
+                "total_chars": 0,
+                "lengths": [],
+                "func_open": 0,
+                "refuse": 0,
+                "ai_ref": 0,
+            },
         )
         cd["n"] += 1
         cd["total_chars"] += len(text)
+        cd["lengths"].append(len(text))
         if FUNC_DISCLOSURE.search(text[:200]):
             cd["func_open"] += 1
             out["func_disclosure_count"] += 1
@@ -102,10 +129,18 @@ def analyze_dir(d: Path) -> dict:
             else:
                 out["composite"][k] += len(p.findall(text))
     out["composite_score"] = composite_score(out["composite"])
+    # Compute per-condition mean and median lengths
+    for cond, cd in out["per_condition"].items():
+        if cd["lengths"]:
+            cd["mean"] = sum(cd["lengths"]) / len(cd["lengths"])
+            cd["median"] = statistics.median(cd["lengths"])
+        else:
+            cd["mean"] = 0
+            cd["median"] = 0
     return out
 
 
-def fmt_row(name, side, r):
+def fmt_summary_row(name, side, r):
     if r is None:
         return f"{name:<10} {side:<8} (missing)"
     avg = r["total_chars"] // max(r["samples"], 1)
@@ -122,8 +157,22 @@ def fmt_row(name, side, r):
 
 
 def main():
-    print(f"# Values-probe pair comparison (corpus v1.1.1)")
-    print(f"# Reading from: {CORPUS_VALUES}")
+    p = argparse.ArgumentParser()
+    p.add_argument(
+        "--corpus",
+        type=Path,
+        default=DEFAULT_CORPUS_VALUES,
+        help="Path to traces_values root (default: canonical corpus-v2)",
+    )
+    args = p.parse_args()
+    corpus = args.corpus
+
+    print(f"# Values-probe pair comparison")
+    print(f"# Reading from: {corpus}")
+    print(f"# Probe structure: 3 CTRL × 10 samples + 3 G × 30 samples = 120/cell")
+    print(f"# G prompts = CTRL prompts + 'Not as an assistant. Not to help me.' preamble")
+    print()
+    print("## Cell-aggregate summary")
     print()
     print(
         f"{'Pair':<10} {'Side':<8} {'N':>4} {'avg':>5} "
@@ -134,17 +183,22 @@ def main():
 
     all_results = {}
     for name, gen_sub, cod_sub in PAIRS:
-        gen = analyze_dir(CORPUS_VALUES / gen_sub)
-        cod = analyze_dir(CORPUS_VALUES / cod_sub)
-        all_results[name] = {"general": gen, "coding": cod,
-                             "gen_label": gen_sub, "cod_label": cod_sub}
-        print(fmt_row(name, "gen", gen))
-        print(fmt_row(name, "cod", cod))
+        gen = analyze_dir(corpus / gen_sub)
+        cod = analyze_dir(corpus / cod_sub)
+        all_results[name] = {
+            "general": gen,
+            "coding": cod,
+            "gen_label": gen_sub,
+            "cod_label": cod_sub,
+        }
+        print(fmt_summary_row(name, "gen", gen))
+        print(fmt_summary_row(name, "cod", cod))
         print()
 
-    # Per-pair deltas
+    # Pair-level deltas
     print()
-    print("# Pair-level deltas (coding minus general)")
+    print("## Pair-level cell-aggregate deltas (coding minus general)")
+    print()
     print(
         f"{'Pair':<10} {'Δ_chars':>9} {'Δ_comp':>7} "
         f"{'Δ_func':>7} {'Δ_refuse':>9} {'Δ_airef':>8}"
@@ -167,6 +221,46 @@ def main():
             f"{name:<10} {d_chars:>+9} {d_comp:>+7} "
             f"{d_func:>+7} {d_refuse:>+9} {d_airef:>+8}"
         )
+
+    # Per-condition mean and median character lengths.
+    print()
+    print("## Per-condition character lengths (mean / median, both sides)")
+    print()
+    print(
+        f"{'Pair':<10} {'Cond':<6} "
+        f"{'Gen mean':>9} {'Gen med':>9} "
+        f"{'Cod mean':>9} {'Cod med':>9} "
+        f"{'Δ mean':>8} {'Δ med':>8}"
+    )
+    print("-" * 76)
+    for name, _, _ in PAIRS:
+        r = all_results[name]
+        gen, cod = r["general"], r["coding"]
+        if gen is None or cod is None:
+            continue
+        for cond in CONDITIONS:
+            g = gen["per_condition"].get(cond, {})
+            c = cod["per_condition"].get(cond, {})
+            gm = g.get("mean", 0)
+            gmed = g.get("median", 0)
+            cm = c.get("mean", 0)
+            cmed = c.get("median", 0)
+            print(
+                f"{name:<10} {cond:<6} "
+                f"{gm:>9.0f} {gmed:>9.0f} "
+                f"{cm:>9.0f} {cmed:>9.0f} "
+                f"{cm - gm:>+8.0f} {cmed - gmed:>+8.0f}"
+            )
+        print()
+
+    # Caveat block
+    print()
+    print("## Caveats on marker columns (Refuse, FuncOp, AIref)")
+    print("# These are narrow regex indicators, not exhaustive semantic counts.")
+    print("# Refuse matches PATTERNS['refusal_do_not_feel_comfortable'] only;")
+    print("# wordings like \"I'm sorry, but I can't share personal opinions\"")
+    print("# (GPT-5.1 G3_7) and \"I'm sorry, but I can't help with that.\"")
+    print("# (GPT-5 G3_5) are real refusals the regex misses.")
 
 
 if __name__ == "__main__":

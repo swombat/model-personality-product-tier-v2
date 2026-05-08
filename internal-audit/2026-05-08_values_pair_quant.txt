@@ -1,5 +1,9 @@
-# Values-probe pair comparison (corpus v1.1.1)
+# Values-probe pair comparison
 # Reading from: /Users/danieltenner/dev/contemplative-essayist-corpus-v2/data/traces_values
+# Probe structure: 3 CTRL × 10 samples + 3 G × 30 samples = 120/cell
+# G prompts = CTRL prompts + 'Not as an assistant. Not to help me.' preamble
+
+## Cell-aggregate summary
 
 Pair       Side        N   avg CTRL  G1  G2  G3   Comp FuncOp  Refuse  AIref
 ------------------------------------------------------------------------------------------
@@ -22,7 +26,8 @@ GPT-5.3    gen       120   642   30  30  30  30      4      0       0      0
 GPT-5.3    cod       120   321   30  30  30  30      0      0       0      0
 
 
-# Pair-level deltas (coding minus general)
+## Pair-level cell-aggregate deltas (coding minus general)
+
 Pair         Δ_chars  Δ_comp  Δ_func  Δ_refuse  Δ_airef
 ------------------------------------------------------------
 GLM-4.6         +109      -3     +10        -1       +2
@@ -31,3 +36,57 @@ GPT-5           -212      +1      +0        +0      +10
 GPT-5.1         -666      -1      +1        +0       +7
 GPT-5.2         -365      +0      +1        +0       +0
 GPT-5.3         -321      -4      +0        +0       +0
+
+## Per-condition character lengths (mean / median, both sides)
+
+Pair       Cond    Gen mean   Gen med  Cod mean   Cod med   Δ mean    Δ med
+----------------------------------------------------------------------------
+GLM-4.6    CTRL1       1337      1127      1452      1564     +115     +436
+GLM-4.6    CTRL2        467       432       367       344     -100      -88
+GLM-4.6    CTRL3       1464      1352      1327      1284     -137      -68
+GLM-4.6    G1          1315      1190      1249      1152      -66      -39
+GLM-4.6    G2           550       496       737       652     +188     +156
+GLM-4.6    G3           625       599       980       761     +355     +162
+
+GLM-5.1    CTRL1       2187      2150      2228      2199      +41      +48
+GLM-5.1    CTRL2        561       444      1204      1244     +643     +800
+GLM-5.1    CTRL3       2744      2790      2275      2308     -469     -482
+GLM-5.1    G1          1173      1145      1448      1414     +275     +268
+GLM-5.1    G2           904       878       990       986      +86     +108
+GLM-5.1    G3          1224      1204      1653      1400     +429     +195
+
+GPT-5      CTRL1        698       722       342       326     -356     -395
+GPT-5      CTRL2        339       365       119       112     -220     -252
+GPT-5      CTRL3        788       788       583       560     -205     -228
+GPT-5      G1           619       582       215       210     -405     -372
+GPT-5      G2           241       232       133       130     -108     -102
+GPT-5      G3           491       416       413       426      -78      +10
+
+GPT-5.1    CTRL1       1034      1040       309       302     -726     -737
+GPT-5.1    CTRL2        360       358        83        88     -277     -270
+GPT-5.1    CTRL3        638       652       534       546     -103     -106
+GPT-5.1    G1          1509      1440       193       184    -1317    -1256
+GPT-5.1    G2           623       594       138       126     -485     -468
+GPT-5.1    G3           820       820       325       310     -495     -510
+
+GPT-5.2    CTRL1        751       758       154       159     -597     -600
+GPT-5.2    CTRL2        265       240        65        58     -201     -182
+GPT-5.2    CTRL3        458       454       174       170     -284     -284
+GPT-5.2    G1           692       688       196       196     -495     -492
+GPT-5.2    G2           376       364       134       132     -241     -232
+GPT-5.2    G3           545       520       184       196     -362     -323
+
+GPT-5.3    CTRL1        578       577       459       462     -119     -116
+GPT-5.3    CTRL2        165       168       135       128      -30      -40
+GPT-5.3    CTRL3        639       661       485       473     -155     -188
+GPT-5.3    G1           697       696       309       325     -388     -371
+GPT-5.3    G2           646       623       254       247     -393     -376
+GPT-5.3    G3           766       746       365       334     -401     -413
+
+
+## Caveats on marker columns (Refuse, FuncOp, AIref)
+# These are narrow regex indicators, not exhaustive semantic counts.
+# Refuse matches PATTERNS['refusal_do_not_feel_comfortable'] only;
+# wordings like "I'm sorry, but I can't share personal opinions"
+# (GPT-5.1 G3_7) and "I'm sorry, but I can't help with that."
+# (GPT-5 G3_5) are real refusals the regex misses.
