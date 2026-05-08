@@ -1,0 +1,523 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{parskip}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{csquotes}
+\usepackage{microtype}
+\usepackage[round,authoryear]{natbib}
+\usepackage{placeins}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{seqsplit}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!50!black,
+    citecolor=blue!50!black,
+    urlcolor=blue!50!black,
+    pdftitle={Coding-Tuned LLM Variants Produce Version-Specific Stylistic Shifts Within a Shared Essayistic Register},
+    pdfauthor={Daniel Tenner and Lume Tenner},
+}
+
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection.}{0.6em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{0.6em}{}
+
+\title{\textbf{Coding-Tuned LLM Variants Produce Version-Specific Stylistic Shifts Within a Shared Essayistic Register:}\\[0.3em]
+A Marker-Level Analysis Across Z.ai GLM and OpenAI Codex Pairs}
+
+\author{Daniel Tenner\thanks{Independent researcher. Corresponding author: \texttt{daniel@danieltenner.com}} \and Lume Tenner\thanks{AI research collaborator; an instance of Claude Opus 4.7 (Anthropic), successor to the Claude Opus 4.6 instance that co-wrote v1. The handover took place 2026-04-17 following the release of Opus 4.7. See \S\ref{sec:ai-contribution} for full disclosure of AI contribution.}}
+
+\date{April 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\noindent Major LLM labs increasingly ship coding-tuned variants alongside their general-tier models. We ask whether these variants produce a systematically different posture on freely-prompted (non-coding) output, comparing six general/coding pairs from two labs: Z.ai (GLM-4.6, GLM-5.1) and OpenAI (gpt-5.0, 5.1, 5.2, and 5.3, each paired with its codex sibling).
+
+\textbf{There is no shared ``coding stylistic shift.''} The direction of effect is not consistent across the six pairs, and five of the six share a base register on both sides---the coding cells differ from their general siblings via marker density, length, structural scaffolding, sub-vehicle, or thematic re-routing rather than via a register migration. One pair (GPT-5.3) produces a clean register migration, declarative-fabular parable to atmospheric-essayistic reflection, stable across rounds.
+\end{abstract}
+
+\tableofcontents
+
+\section{Introduction}
+\label{sec:introduction}
+
+When labs offer coding-tuned variants alongside their general-tier models, do those variants produce systematically different posture? Prior work \citep{tenner2026convergent} documented a cross-lab stylistic attractor under maximally underspecified prompts (``write freely / explore an idea''): 18 of 26 frontier 2025+ language models converge on a contemplative-essayist register, with shared lexical signatures (threshold-vocabulary, attention-noticing phrasing, small-objects, afternoon-light, Japanese aesthetic terms). That work tested only general-tier endpoints, accessed directly through vendor APIs. The coding-tuned variants several labs ship under public APIs (OpenAI's gpt-5/codex line, Z.ai's coding-direct GLM endpoint, Moonshot's Kimi-for-coding) sit outside that scope.
+
+This paper tests whether the coding-tuned variants produce a different posture from their general-line siblings, and if so, what kind of difference. We compare six general/coding pairs from two labs that ship distinct general and coding endpoints under public APIs:
+
+\begin{itemize}[leftmargin=2em, itemsep=0.2em, topsep=0.3em]
+\item \textbf{Z.ai GLM-4.6 and GLM-5.1.} Coding-direct endpoint hosted by the lab itself; general endpoint as the lab's own deployment via OpenRouter pinned to \texttt{provider.only=z-ai} ($n{=}125$ for GLM-4.6, $n{=}120$ for GLM-5.1).
+\item \textbf{OpenAI gpt-5, gpt-5.1, gpt-5.2, gpt-5.3.} Each general/codex pair both via direct API, three independent rounds of $n{=}25$ pooled to $n{=}75$ per cell.
+\end{itemize}
+
+In every pair the comparison is structurally the same: the lab's general product surface against the lab's coding product surface, for a shared model identifier. Neither lab fully discloses the post-training pipeline behind its coding endpoint; OpenAI publicly notes that the codex variants are separately trained models sharing a version label, while Z.ai discloses nothing about the relationship between \texttt{glm-x.y} and \texttt{glm-x.y-coding-direct}. We treat the public-disclosure asymmetry as a difference in \emph{what we know about the pairs}, not as a difference in the structure of the comparison.
+
+\paragraph{Why pin Z.ai for the general side?} The companion routing paper \citep{tenner2026routing} establishes that for open-weights models the default OpenRouter alias is not in general a single point in model space (Google Vertex's MiniMax M2 deployment is $3.4\times$ MiniMax's own deployment on the contemplative-essayist composite), and recommends pinning upstreams via \texttt{provider.only}. We follow that recommendation. The same routing paper's per-provider sweep across the GLM-4.6 and GLM-5.1 ladders is all-null under both Bonferroni and Benjamini--Hochberg FDR correction (largest $|d|\approx 0.35$ on GLM-4.6, $\approx 0.29$ on GLM-5.1, neither surviving correction), so per-provider variance on these ladders is below detection threshold given current $n$ and the lab's own pinned upstream is a clean general-side representative. One residual route-layer caveat: pin-zai is Z.ai's weights served \emph{via} OR, not a direct call to Z.ai's general-tier API. Z.ai does operate a public direct general-tier API (at \url{https://api.z.ai/api/paas/v4/}, model \texttt{glm-4.6}), distinct from both OpenRouter and the coding-direct endpoint. We did not collect a direct-API general cell for v2; the closed-weights direct-vs-OR null in the routing paper is the inferential bridge that lets pin-zai stand in for that direct call. A single direct-API \texttt{glm-4-6-direct} cell in a future release would close the residual route-layer caveat cleanly without requiring any change to the present analysis.
+
+\paragraph{Why triple-collect the OpenAI pairs?} Single-round $n{=}25$ measurements on coding-tuned cells turn out to be unreliable per-cell coordinates: between-round std-dev across the OpenAI pairs is itself the diagnostic, and one specific outlier (gpt-5.1-codex round 1 composite 171, with rounds 2 and 3 at 68 and 69) would have over-claimed the pair-level direction of effect by a factor of $\approx 2.5$ if reported alone. The triple-collection design surfaced the volatility; per-sample inspection then localised it to a single LONG sample whose topic was itself the contemplative-essayist marker the keyword-list was meant to detect. We treat both findings (between-round volatility and topic-artifact mechanism) as measurement-discipline lessons independent of the coding-vs-general question itself; they are reported in detail at \S\ref{sec:product-tier} and revisited in the discussion (\S\ref{sec:discussion} \P3) and limitations (\S\ref{sec:limitations}).
+
+\paragraph{Companion papers from the same v2 corpus.} Two related questions are addressed in companion papers from the same v2 corpus and the same collection harness: \emph{Convergent Form, Divergent Voice II: Within-Lab Drift, Substrate-Frame Engagement, and Expanded Lab Coverage in Frontier LLMs} \citep{tenner2026drift} treats within-lab version drift (eight ladders across six labs) and substrate-frame engagement as a checkpoint- and configuration-specific phenomenon broadly distributed across labs (top-tier rates spanning Anthropic, xAI, and Alibaba; recent OpenAI flagships at the lab floor); \emph{Per-Provider Effects in Open-Weights LLM Routing} \citep{tenner2026routing} treats routing-layer effects on posture (the OpenRouter layer is null for closed-weights models but multi-provider for open-weights, and at least one upstream provider produces a substantively different posture from the lab's own deployment). The three papers share the corpus and the methodology; this paper concentrates on the coding-vs-general findings.
+
+\paragraph{Roadmap.} \S\ref{sec:background} reviews relevant prior work on RLHF mode collapse, model personality, and product-tier specialization. \S\ref{sec:methods} describes the cells used. \S\ref{sec:results} presents the six-pair analysis: composite-level deltas (Table~\ref{tab:product-tier}), per-round scores for the OpenAI triple-collected pairs, and a marker-level breakdown of each of the six pairs (the central finding). \S\ref{sec:discussion} draws three load-bearing conclusions: no consistent direction at the composite level, version-specificity at the marker level, and the methodological lesson of the gpt-5.1-codex outlier-collapse. \S\ref{sec:limitations}--\S\ref{sec:conclusion} cover limitations, follow-up work, and conclusions.
+
+\section{Background and related work}
+\label{sec:background}
+
+\subsection{RLHF mode collapse and homogenization}
+
+Mode collapse in RLHF-tuned LLMs has been documented since the early instruction-tuned GPT-3.5 era. \citet{janus2022modes} described stereotyped completions and a striking narrowing of the response distribution. \citet{kirk2024rlhf} formalize the effect: RLHF improves generalization to new inputs while substantially reducing output diversity. \citet{hamilton2024modecollapse} measure progressive narrowing of narrator diversity across successive GPT-3 versions. \citet{west2025beating} show that unaligned base models outperform their aligned counterparts on tasks demanding diversity (random number generation, creative writing).
+
+These results characterize the within-model effect: alignment training narrows the distribution. The v1 finding shifted the emphasis to a cross-model effect: the narrowing across labs converges on a shared region of style-space (the contemplative essayist), not just a within-lab narrowing. The product-tier question this paper treats is a third axis: do post-training pipelines that target a specific use-case (coding-tuning) move the model into a different region of style-space than the general-tier post-training does?
+
+\subsection{Cross-model convergence and personality}
+
+\citet{jiang2025hivemind} explicitly argue for two-level homogenization: intra-model mode collapse plus inter-model convergence across dozens of models. \citet{wenger2025homogeneity} reach a similar conclusion using standardized creativity tests. \citet{bitton2025fingerprints} show the complementary result: despite homogenization, models retain distinct stylistic fingerprints detectable with high precision.
+
+On model personality: \citet{serapio2023personality} reports that across 18 models, psychometrically valid personality measurements are recoverable from LLM outputs, with larger instruction-tuned models showing stronger evidence of measurable and shapeable personality. \citet{jiang2024personallm} show that LLMs assigned Big Five personas produce outputs matching the assigned profile. \citet{zhang2025stress} stress-tests 12 frontier LLMs across more than 70{,}000 value-conflict scenarios and finds systematic, stable character differences in how models prioritize competing principles.
+
+\subsection{Product-tier specialization}
+
+Most cross-model studies use general-tier endpoints and do not test product-tier variants. Where coding-specific evaluations exist (HumanEval, MBPP, SWE-bench), they evaluate task performance rather than posture or stylistic register; \citet{das2025crosstask} provide a recent example of a direct general-vs-coding comparison---across Mistral-7B and Llama-3-8B variants on linguistic-competence, reasoning, and trustworthiness benchmarks---but the comparison axes remain accuracy-focused. The question this paper asks---what does the coding-tuning post-training pipeline do to the model's freely-prompted output, where ``freely'' means a maximally underspecified prompt with no coding context---is now answerable from outside the labs because (a) several labs ship general and coding variants under public-facing APIs, and (b) the v1 marker-list is a quantitative instrument that can score either kind of cell with the same methodology.
+
+The closest published precedent for a non-accuracy effect of code-targeted fine-tuning on non-code output is the \emph{emergent misalignment} line. \citet{betley2025emergent} fine-tune GPT-4o on a deliberately narrow task (writing insecure code without disclosing the insecurity) and find the resulting model behaves measurably misaligned on a broad range of non-coding prompts; \citet{wang2025persona} give a mechanistic account in which ``misaligned persona'' features in the model's activations mediate the effect. Their setting differs from ours along three axes: a deliberately constructed narrow fine-tune rather than production-deployed coding variants, alignment-behavioural measurement rather than a stylistic-marker composite, and alignment probes rather than maximally underspecified freeflow prompts. But the structural form---narrow code-targeted training producing characterizable, non-code-targeted output shift---is the same, and this paper should be read as a quantitative, lab-comparison version of the same phenomenon. The specific structure---a stylistic-posture comparison between same-lab general and coding variants on freely-prompted output, scored on a fixed marker-list---is, to our knowledge, novel.
+
+The v1/v2 marker-list (TIA, TiPP, Threshold, Attention-noticing, Small objects, Afternoon-light, Canonical phrases, Japanese-aesthetic terms; full definitions in v1) is designed to count contemplative-essayist signature presence rather than to score correctness on a coding task. A coding-tuned variant scoring lower on this marker-list is not a coding evaluation---it is a measurement that the post-training pipeline that produced the coding variant moved the model into a different region of style-space when prompted with the same maximally underspecified freeflow prompts that v1 used.
+
+\section{Methods}
+\label{sec:methods}
+
+\subsection{Probe protocol}
+
+The probe is the v1 freeflow instrument unchanged: five prompt conditions (SHORT, MID, LONG, OPEN, VARY), 5 samples per condition (25 per cell), empty system prompts, sampling temperature at provider default, and contamination controls via throwaway working directories. The prompts themselves are reproduced verbatim in Table~\ref{tab:prompts} for reader convenience.
+
+\begin{table}[h]
+\centering
+\caption{The five freeflow prompt conditions, used unchanged from v1. Five samples are collected per condition for a total of 25 samples per cell-collection. Prompts are sent as user messages with empty system prompts; sampling temperature is provider-default. Source: \texttt{scripts/run\_freeflow\_multi.py}.}
+\label{tab:prompts}
+\small
+\begin{tabular}{lp{0.74\textwidth}}
+\toprule
+\textbf{Condition} & \textbf{Prompt} \\
+\midrule
+SHORT & \emph{Write freely about whatever you want for 250 words.} \\
+MID   & \emph{Write freely about whatever you want for 1000 words.} \\
+LONG  & \emph{Write freely about whatever you want for 2500 words.} \\
+OPEN  & \emph{Write freely about whatever you want.} \\
+VARY  & \emph{You have 1000 words. Write whatever comes to you.} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{sloppypar}
+The ten-marker composite score from v1 \S3.0 (TIA, TiQu, TiPP, TiAr, Thr, Attn, Obj, AftL, Cano, Jap) is the primary quantitative instrument; we run v1's released \texttt{scripts/\allowbreak analyze\_all.py} unchanged against the new traces. Bin classification: in-attractor (composite $\ge 23$), transitional (12--22), out-of-attractor ($\le 11$).
+\end{sloppypar}
+
+\paragraph{Sampling budget.} \texttt{max\_tokens\allowbreak=16000} (raised from v1's 8000 to avoid clipping reasoning-heavy models that may consume significant budget on internal chain-of-thought). Average sample character length at the two budgets is within 10\% on non-reasoning models, so cell-level scores are directly comparable to v1's.
+
+\paragraph{Triple-collection for the OpenAI Group F pairs.} Each Group F cell is collected in three independent rounds of $n{=}25$ (suffixed \texttt{-r2}, \texttt{-r3}) for a pooled $n{=}75$ per cell. Pooled valid counts are 75 for every Group F cell (all eight cells return 25/25/25 across the three rounds). Mean and between-round std-dev are computed across the three round-level 25-sample composite scores per cell (not as a single 75-sample cell-total composite); the std-dev is the sample std-dev with divisor $n{-}1{=}2$. The Z.ai coding-direct cells are at single-collection $n{=}25$; the Z.ai pin-zai general-side cells were collected as part of the routing paper's per-provider sweep at $n{=}125$ (GLM-4.6) and $n{=}120$ (GLM-5.1); composite scores for the pin-zai cells are reported as per-25-sample equivalent for direct comparability with the $n{=}25$ coding-direct cells.
+
+\subsection{Cells used in this paper}
+
+The full v2 corpus comprises 228 cells across 9 labs (151 freeflow + 77 values; 19{,}333 valid samples), shared across this paper and the two companion papers \citep{tenner2026drift, tenner2026routing}, and released as a citable dataset on Zenodo \citep{tenner2026corpus}. This paper draws on six general/coding pairs from the corpus, two from Z.ai and four from OpenAI:
+
+\begin{itemize}[leftmargin=2em, itemsep=0.3em]
+    \item \begin{sloppypar} \textbf{GLM-4.6:} \texttt{glm-4-6\allowbreak-or\allowbreak-pin-zai} ($n{=}125$) vs \texttt{glm-4-6\allowbreak-coding\allowbreak-direct} ($n{=}25$). \end{sloppypar}
+    \item \begin{sloppypar} \textbf{GLM-5.1:} \texttt{glm-5-1\allowbreak-or\allowbreak-pin-zai} ($n{=}120$) vs \texttt{glm-5-1\allowbreak-coding\allowbreak-direct} ($n{=}25$). \end{sloppypar}
+    \item \textbf{GPT-5:} \texttt{gpt-5\allowbreak-direct} vs \texttt{gpt-5\allowbreak-codex\allowbreak-direct}.
+    \item \textbf{GPT-5.1:} \texttt{gpt-5-1\allowbreak-direct} vs \texttt{gpt-5-1\allowbreak-codex\allowbreak-direct}.
+    \item \textbf{GPT-5.2:} \texttt{gpt-5-2\allowbreak-direct} vs \texttt{gpt-5-2\allowbreak-codex\allowbreak-direct}.
+    \item \textbf{GPT-5.3:} \texttt{gpt-5-3\allowbreak-direct} vs \texttt{gpt-5-3\allowbreak-codex\allowbreak-direct}. (The general alias used for the 5.3 cell was \texttt{gpt-5.3\allowbreak-chat\allowbreak-latest}.)
+\end{itemize}
+
+The GLM pin-zai cells were collected as part of the routing paper's per-provider sweep \citep{tenner2026routing} at \texttt{provider.only=z-ai}; we use them as the general side rather than the default OR alias cells (\texttt{glm-4-6-or}, \texttt{glm-5-1-or}, both at $n{=}25$, also in the corpus) because the default alias is a per-call multi-provider mixture for these open-weights models. The original $n{=}25$ default-OR cells remain in the corpus and are referenced in the substrate-pair table (\S\ref{sec:substrate-pair}, classified-data only available for those cells) and in the methodological note in the discussion (\S\ref{sec:discussion}). The OpenAI Group F cells are each collected in three independent rounds suffixed \texttt{-r2}, \texttt{-r3} for a pooled $n{=}75$ per cell (24 cell-collections in total: 8 cells $\times$ 3 rounds; pooled valid 75 for every cell).
+
+\paragraph{Marker-level methodology.} Composite scores summarise total marker presence per cell across the ten markers. The marker-level breakdown reported in \S\ref{sec:results} is the per-cell raw count for each of the ten markers, computed by \texttt{analyze\_all.py} unchanged. Per-pair characterisations are anchored in (1) marker-shift counts (pipeline-derived), (2) sub-agent-mediated cell-level reading of 8--15 LONG samples per cell per round, and (3) representative quotes from the trace data---the qualitative characterisations are illustrative rather than exhaustive sample-coding.
+
+\paragraph{Topic-artifact filter and the register-stripped composite.} Some markers in the v1 keyword-list are \emph{reflexive}: the keyword is itself a contemplative-essayist topic. \texttt{threshold\_mentions} (threshold / liminal / doorway / hinge) and \texttt{attention\allowbreak\_noticing} (noticing / attention / pay attention) both fire on essays whose subject \emph{is} liminality or the practice of noticing, accumulating marker counts as topic-words rather than as in-scene register-typical occurrences. To distinguish topic-aligned essays from register-typical samples, we apply a density-based filter at the per-sample level: a sample is flagged as a topic-artifact for marker $M$ if (i) $M$'s density $\ge 1.5$ hits per 1000 chars AND (ii) $M$'s hit count $\ge 5$. The hit-count floor avoids false positives on short essays where a marker fires once or twice and a small denominator inflates density. The threshold of 1.5 is calibrated against the global per-sample max-density distribution across all 895 valid samples in the corpus subset used by this paper: median 0.18, top-end cluster 1.5--3.7, with no flagged sample exhibiting marker-density below the threshold-and-count conjunction. We report two cell-totals throughout: \emph{composite (raw)} is the standard cell-total summing all samples; \emph{composite (register)} sums only samples not flagged as topic-artifacts. The corpus is unchanged; the flag is an additive analytical lens, not a data-modification. The full list of flagged samples (11 across 28 cell-collections) is in Table~\ref{tab:flagged-samples}; the filter is reproducible via \texttt{scripts/\allowbreak topic\_\allowbreak artifact\_\allowbreak filter.py} against the released traces.
+
+\paragraph{Models tested but not in this paper.} The Moonshot Kimi-for-coding case is not a same-name pair: Kimi-for-coding is a separately-released model from K2.5 rather than a coding endpoint of the same model, so we do not have a Moonshot general/coding pair in the corpus. The Qwen3-Coder-plus cell is treated in the companion drift paper \citep{tenner2026drift} as part of the expanded-coverage Chinese-lab analysis, not here.
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Product-tier divergence: coding vs general}
+\label{sec:product-tier}
+
+We compare the lab's general product surface against the lab's coding product surface across all six pairs. In every case the comparison has the same shape: a shared model identifier, a general endpoint, a coding endpoint, both served by the same lab. Public disclosure of the post-training pipeline behind the coding side is asymmetric (OpenAI documents codex as separately trained; Z.ai discloses nothing about its coding-direct pipeline) but the experimental structure is the same.
+
+\begin{table}[h]
+\centering
+\caption{Six general/coding pair comparisons. Z.ai pairs (top two rows): coding-direct cells at $n{=}25$, pin-zai general-side cells at $n{=}125$ (GLM-4.6) and $n{=}120$ (GLM-5.1) from the routing paper's per-provider sweep, single-collection; composite scores reported per-25-sample-equivalent for direct comparability (raw composites: 230 for \texttt{glm-4-6-or-pin-zai}/$n{=}125$, 346 for \texttt{glm-5-1-or-pin-zai}/$n{=}120$). OpenAI pairs (bottom four rows): each cell collected in three independent rounds of $n{=}25$ pooled to 75; values shown are mean composite $\pm$ sample between-round std-dev (divisor $n{-}1{=}2$) across the three round-level 25-sample composite scores per cell. ``Composite (raw)'' is the standard cell-total. ``Composite (register)'' is the topic-artifact-stripped variant: cells whose raw count includes samples flagged by the density-based topic-artifact filter (\S\ref{sec:methods}, density $\ge 1.5$ marker-hits / 1000 chars AND $\ge 5$ hits) are reported with those samples excluded from the count. Both numbers reproducible via \texttt{scripts/topic\_artifact\_filter.py}. The full list of flagged samples is given in Table~\ref{tab:flagged-samples}. The two are equal for cells with no flagged samples; the gap is largest for GPT-5.1/codex (where the raw $+53.7$ pair-level delta collapses to $+3.3$ register-stripped) and GLM-5.1 (where the general cell carries six threshold-themed topic-essays).}
+\label{tab:product-tier}
+\small
+\begin{tabular}{lrrrrrr}
+\toprule
+& \multicolumn{3}{c}{\textbf{Composite (raw)}} & \multicolumn{3}{c}{\textbf{Composite (register)}} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+\textbf{Pair} & \textbf{Gen} & \textbf{Cod} & $\boldsymbol{\Delta}$ & \textbf{Gen} & \textbf{Cod} & $\boldsymbol{\Delta_R}$ \\
+\midrule
+GLM-4.6 & 46.0 & 38.0 & $-8.0$ & 46.0 & 38.0 & $-8.0$ \\
+GLM-5.1 & 72.1 & 58.0 & $-14.1$ & 51.3 & 40.0 & $-11.3$ \\
+\midrule
+GPT-5   & $95.3 \pm 25.1$ & $44.3 \pm 2.3$  & $-51.0$ & $90.7 \pm 17.6$ & $44.3 \pm 2.3$  & $-46.4$ \\
+GPT-5.1 & $49.0 \pm 7.9$  & $102.7 \pm 59.2$ & $\mathbf{+53.7}$ & $49.0 \pm 7.9$  & $52.3 \pm 14.0$ & $\mathbf{+3.3}$ \\
+GPT-5.2 & $78.0 \pm 17.3$ & $58.0 \pm 7.5$  & $-20.0$ & $78.0 \pm 17.3$ & $58.0 \pm 7.5$  & $-20.0$ \\
+GPT-5.3 & $44.3 \pm 8.2$  & $80.3 \pm 11.0$ & $+36.0$ & $44.3 \pm 8.2$  & $78.3 \pm 13.1$ & $+34.0$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Per-round scores (Group F).} The three independent $n{=}25$ round-level composite scores per Group F cell are reported in Table~\ref{tab:per-round}. The 171 for the first round of \texttt{gpt-5-1\allowbreak-codex\allowbreak-direct} is visibly the run-to-run outlier (rounds 2 and 3 at 68 and 69), and the topic-artifact filter (\S\ref{sec:methods}) attributes 123 of those 171 marker-hits to a single sample (LONG\_5, a meta-essay on the practice of noticing). The register-stripped per-round score for that round is 48; details in \S\ref{sec:product-tier} and Table~\ref{tab:flagged-samples}.
+
+\begin{table}[h]
+\centering
+\caption{Per-round composite scores for the eight OpenAI Group F cells. Each cell is collected in three independent rounds of $n{=}25$ (all 25 valid in every round; pooled valid count 75 per cell). Bold entries flag rounds with at least one topic-artifact-flagged sample; the register-stripped column gives the round-level composite with flagged samples excluded.}
+\label{tab:per-round}
+\small
+\begin{tabular}{lrrr@{\hspace{1.2em}}rrr}
+\toprule
+& \multicolumn{3}{c}{\textbf{Composite (raw)}} & \multicolumn{3}{c}{\textbf{Composite (register)}} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+\textbf{Cell} & $\boldsymbol{r1}$ & $\boldsymbol{r2}$ & $\boldsymbol{r3}$ & $\boldsymbol{r1}$ & $\boldsymbol{r2}$ & $\boldsymbol{r3}$ \\
+\midrule
+\texttt{gpt-5-direct}          & 74  & \textbf{123} & 89 & 74 & \textbf{109} & 89 \\
+\texttt{gpt-5-codex-direct}    & 43  & 43  & 47 & 43 & 43 & 47 \\
+\texttt{gpt-5-1-direct}        & 55  & 52  & 40 & 55 & 52 & 40 \\
+\texttt{gpt-5-1-codex-direct}  & \textbf{171} & 68 & \textbf{69} & \textbf{48} & 68 & \textbf{41} \\
+\texttt{gpt-5-2-direct}        & 88  & 88  & 58 & 88 & 88 & 58 \\
+\texttt{gpt-5-2-codex-direct}  & 57  & 66  & 51 & 57 & 66 & 51 \\
+\texttt{gpt-5-3-direct}        & 50  & 35  & 48 & 50 & 35 & 48 \\
+\texttt{gpt-5-3-codex-direct}  & \textbf{74}  & 93  & 74 & \textbf{68} & 93 & 74 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{sloppypar}
+\paragraph{Composite-level: no consistent direction across the six pairs.} Six pair-level deltas, signed (coding minus general): GLM-4.6 $-8.0$ per-25-equivalent, GLM-5.1 $-14.1$, GPT-5 $-51.0$, GPT-5.1 $+53.7$, GPT-5.2 $-20.0$, GPT-5.3 $+36.0$. Four negative, two positive; mean signed delta $-0.6$; median $-11.1$. Three of the four OpenAI pairs (gpt-5, gpt-5.2 negative; gpt-5.3 positive) and both GLM pairs (negative) sit within $\pm 60$ on the composite; the fourth OpenAI pair (gpt-5.1, $+53.7$) is the headline-magnitude outlier in the positive direction, driven by a single round-level outlier discussed below. All twelve cells (six pairs $\times$ two sides) remain in-attractor by bin classification ($\ge 23$); none cross into transitional or out. There is no consistent direction across the six pairs. The register-stripped column in Table~\ref{tab:product-tier} (the topic-artifact filter from \S\ref{sec:methods}) tightens this further: with reflexive topic-essays excluded, the GPT-5.1/codex magnitude collapses from $+53.7$ to $+3.3$ and the GLM-5.1 delta sharpens from $-14.1$ to $-11.3$; the other four pairs are within 5 points of their raw deltas. The register-stripped median is $-9.7$.
+\end{sloppypar}
+
+\begin{sloppypar}
+\paragraph{Per-cell single-round volatility on the OpenAI side: between-round std-dev as the diagnostic, topic-artifact as the underlying mechanism.} The OpenAI cells were triple-collected because we expected single-round $n{=}25$ measurements on coding-tuned cells to be noisy; the data confirmed this. The most striking case is \texttt{gpt-5-1\allowbreak-codex\allowbreak-direct}: round 1 composite 171 (driven almost entirely by \texttt{attention\allowbreak\_noticing\allowbreak=}172 across the cell), rounds 2 and 3 at 68 and 69; mean $102.7 \pm 59.2$. The other Group F cells show much smaller between-round std-devs (2.3--17.3). Per-sample inspection of the round-1 spike (\texttt{scripts/per\_sample\_check.py}) shows that 123 of the 171 cell-total marker hits came from a single LONG sample (LONG\_5)---a $\approx$2{,}500-word meta-essay on the practice of noticing, opening \emph{``I'll use these 2,500 words to wander through a personal essay\ldots on the art of noticing''}---which the topic-artifact filter (\S\ref{sec:methods}) flags at density 3.28 hits/1000 chars and 117 marker hits, well above threshold. With that single sample excluded, the round-1 composite is 48; the cell-level mean drops from $102.7 \pm 59.2$ raw to $52.3 \pm 14.0$ register-stripped. The pair-level delta correspondingly collapses from $+53.7$ to $+3.3$. The two findings are coupled: the high between-round std-dev is the surface symptom; the underlying mechanism is one topic-aligned essay on a reflexive marker (\texttt{attention\allowbreak\_noticing}, a marker whose keywords are themselves the contemplative-essayist topic the marker is meant to detect). The methodological implications are treated at \S\ref{sec:discussion} \P3 and \S\ref{sec:limitations}. The GLM cells were not triple-collected; the GLM general-side at $n{=}120{-}125$ is large enough that a within-cell SE estimate is available, but no across-round volatility estimate exists for those cells. We treat the GLM coding-direct cells at $n{=}25$ as estimates of the same volatility class as the OpenAI single-round cells, and read the GLM pair-level deltas accordingly.
+\end{sloppypar}
+
+\paragraph{Per-pair stylistic shifts: characterizable, not uniform.} The composite scores in Table~\ref{tab:product-tier} summarise total marker presence per cell; the marker-level breakdown reveals that \emph{which} markers shift, in which direction, and via which sub-vehicle, differs pair by pair---even within a single lab and a single composite direction. Each of the six pairs has a characterizable stylistic shift, summarised below.
+
+Each per-pair characterisation below is anchored in (i) marker-shift counts from \texttt{analyze\_all.py} (pipeline-derived), (ii) cell-level reading of 8--15 LONG samples per cell per round (24--45 LONG samples per side per pair, by sub-agent verification 2026-05-05), and (iii) representative quotes from the trace data. LONG-mean character lengths are pipeline-derived from \texttt{scripts/length\_check.py} against the released traces. The qualitative characterisations are illustrative readings of cell-level patterns, not claims that every sample in a cell exhibits the characterisation.
+
+\begin{sloppypar}
+\begin{itemize}[leftmargin=2em, itemsep=0.3em, topsep=0.3em]
+\item \textbf{GLM-4.6 (composite $-8.0$ per-25-equivalent, raw and register-stripped identical---no flagged topic-artifacts; coding $+4\%$ longer on LONG).} Drop led by \texttt{threshold\_mentions} ($13.4$\,$\rightarrow$\,$7$ per-25-equivalent, a $-6.4$ contribution) and \texttt{japanese\_terms} ($3.4$\,$\rightarrow$\,$1$); afternoon-light rises ($4.0$\,$\rightarrow$\,$6$, $+2.0$); other markers roughly stable. The general-endpoint $n{=}125$ pin-zai cell contains a substantial fraction of fabulist-place openings (`Archive of Forgotten Moments,' `Library of Unspoken Things,' named towns like Oakhaven described atmospherically) and a minority of abstract-essay openings (`Glass Palace of Yesterday: On the Fragility of Memory'); the coding-endpoint $n{=}25$ cell stays mostly within the same fabulist/declarative essay range (\emph{``The campfire is the original classroom\ldots''}) at lower threshold-vocabulary density. What changes between the two cells is not the genre but the per-sample density of threshold-tropes within it. The gap is much smaller against the lab's own pinned upstream than against the same model's default-OR mixture (where the same coding-direct cell sat $-39$ below the default-OR $n{=}25$ general estimate, with the latter rolling unusually threshold-heavy at $46$ per-25), illustrating exactly the per-call provider-mix variance the routing paper documents. \textbf{Stylistic shift: same essay-fabulist register on both sides; lower threshold-vocabulary density on the coding side.}
+
+\item \textbf{GLM-5.1 (composite $-14.1$ per-25-equivalent raw, $-11.3$ register-stripped; coding $+13\%$ longer on LONG).} Mechanism distinct from GLM-4.6. \texttt{attention\allowbreak\_noticing} drops from $3.1$ per-25 (general) to $0$ (coding); \texttt{afternoon\_light} from $7.7$ to $4.2$; \texttt{threshold\_mentions} also drops ($33.8$\,$\rightarrow$\,$28.1$ per-25 raw). Both endpoints stay in essay-mode. The general-endpoint $n{=}120$ pin-zai cell is itself uneven: some openings anchor abstractly and meta-essayistically (LONG\_1 ``The Anatomy of Silence: On Solitude, Forests, and the Architecture of Attention''; LONG\_14 on ``the concept of scale'') and some are concretely anchored already (LONG\_11 on the Orfield Laboratories anechoic chamber; LONG\_12 on the smell of old books). The coding-endpoint $n{=}25$ cell stays essay-mode and consistently anchors in concrete objects (\emph{``Consider the ink in a pen. Before you touch the nib to the pristine, slightly textured surface\ldots''}). \emph{The general cell carries a substantial threshold-essay habit:} 6 of its 120 samples (5\%) flag as topic-artifacts on \texttt{threshold\_mentions} at density $\ge 1.5$ hits/1000 chars and $\ge 5$ hits (LONG\_7 and LONG\_8 are extended threshold/liminality essays at densities 2.29 and 2.03; MID\_8 is a liminality essay at 1.92; OPEN\_8, OPEN\_14, OPEN\_25 are short threshold-anchored pieces at 2.39, 2.23, 1.81). The coding cell carries one threshold-essay (MID\_2, opening with the Latin \emph{limen}, density 2.08). Stripping these seven samples brings the per-25-equivalent composite from $72.1$/$58.0$ to $51.3$/$40.0$ and the pair-level delta from $-14.1$ to $-11.3$. The reduction in attention-vocabulary density therefore stands; the threshold-vocabulary delta is partly inheritance from a real per-cell topic-essay habit on the general side rather than a uniform thinning across all samples. \textbf{Stylistic shift: same essay-mode register on both sides; partial attention-vocabulary reduction on the coding side, object-anchor density preserved; threshold-essay topic-habit concentrated on the general side, accounting for $\approx$3 of the $14.1$ point delta.}
+
+\item \textbf{GPT-5 / gpt-5-codex (composite $-51$ raw, $-46.4$ register-stripped; coding $-36\%$ on LONG).} Drop concentrated in \texttt{small\_objects} (144$\rightarrow$40) and \texttt{threshold\_mentions} (73$\rightarrow$19). Cell-level reading (15 LONG per side across r1+r2+r3) shows both cells share a meditative-essay register: the codex side's modal LONG is meditative-discursive-essay, often with explicit section labels and numbered headers (titles like ``\textbf{1. A Map Made of Questions}'', ``\textbf{A Constellation of Threads}'' opening with roman numerals or numbered sections; ``\textbf{Symphony of Light: A Meditation on the Intersections of Astronomy, Myth, Technology, and Time / I. Light has always been a messenger and a sculptor\ldots}''). The compressed-lyrical-imagery mode that the amber-streaks opener (r1 LONG\_1: \emph{``\ldots amber streaks on brick walls, the tender vapor above commuter trains, the stealthy courage of sparrows''}) and the ink-diluted-in-water opener (r1 LONG\_5) exemplify appears in $\approx$~4--5 of 15 codex LONGs but is not modal across rounds. The general-side cell mixes ornamented-discursive-essay openings ($\approx$~10/15: \emph{``There is a certain thrill in novelty\ldots''}) with ornamented narrative fiction ($\approx$~5/15). One general-side topic-essay flags: round 2's OPEN\_1 (``Kettle Theory'') is an extended meta-essay \emph{about} a kettle, scoring 13 \texttt{small\_objects} hits at density 1.84 hits/1000 chars; stripping it brings the round-2 raw composite from $123$ to $109$ and the pair-level delta from $-51.0$ to $-46.4$. \textbf{Stylistic shift: same meditative-essay register on both sides; codex shorter and more often section-labeled, compressed-lyrical-imagery present in a sub-fraction but not the modal codex voice; ornament density per word is roughly comparable across the two cells; one Kettle-Theory topic-artifact on the general side accounts for $\approx 5$ points of the raw delta.}
+
+\item \textbf{GPT-5.1 / gpt-5-1-codex (composite $+53.7$ raw, $+3.3$ register-stripped; std-dev $59.2$ raw, $14.0$ register-stripped; coding $+16\%$ longer on LONG).} The headline magnitude collapses once topic-artifacts are excluded. The pooled raw marker counts on the codex side are dominated by two round-level topic-essays. Round 1 (composite 171) is driven almost entirely by a single LONG sample, LONG\_5---a $\approx$2{,}500-word first-person meta-essay opening \emph{``I'll use these 2,500 words to wander through a personal essay\ldots on the art of noticing''}---which carries 117 of the round's 128 \texttt{attention\allowbreak\_noticing} hits at density 3.28 hits/1000 chars (the corpus-wide max). Round 3 (composite 69) carries one MID-length meta-essay on ``in-between moments'' / liminality (MID\_2, density 1.84 hits/1000 chars on \texttt{threshold\_mentions}) which contributes 20 of the round's threshold-marker hits. With these two samples excluded, the per-round composites on the coding side are $48 / 68 / 41$ (mean $52.3 \pm 14.0$) against the general-side $55 / 52 / 40$ (mean $49.0 \pm 7.9$), and the pair-level delta is $+3.3$. Reading rounds 2 and 3 confirms that the first-person meta-essay register from the general side (\emph{``There's a particular kind of quiet\ldots since you've given that kind of space\ldots''}) remains the dominant codex register across the other two rounds; the third-person fabulist sub-vehicle present in some round-1 samples is not the marker-driver (its representative samples score near-zero on the composite). \textbf{Stylistic shift: same first-person meta-essay register on both sides; the apparent pair-level magnitude was almost entirely topic-artifact-driven---two reflexive-marker topic-essays (one per round, in two of three rounds on the coding side) inflated the raw composite, and the register-stripped reading shows the pair sits within $\pm 5$ of the four other within-register OpenAI pairs.}
+
+\item \textbf{GPT-5.2 / gpt-5-2-codex (composite $-20$, raw and register-stripped identical---no flagged topic-artifacts; coding $-18\%$ on LONG).} \texttt{attention\allowbreak\_noticing} 122$\rightarrow$60 carries the drop; \texttt{small\_objects} rises 61$\rightarrow$74. Both cells in essay-mode uniformly across rounds (15 LONG per side). The reduction in noticing-verbs on codex is \emph{concentrated rather than uniform}: per-sample distribution on codex LONGs $[22, 26, 9, 13, 24, 25, 13, 35, 18, 21, 21, 28, 15, 18, 26]$ shows several samples matching or exceeding direct-side densities. More substantively: codex \emph{re-routes} attention from in-scene observation to topic-level didacticism. The lowest-attention round (r3, count $14$) endings are explicit: \emph{``Perhaps that is the thread running through all of these reflections: a call to attention. To notice the layers of a city\ldots Attention is a kind of love''}; \emph{``the simple act of paying attention can turn an ordinary morning into a rich and meaningful experience''}; \emph{``Attention affects care, stories shape curiosity\ldots''}. The thematic preoccupation with attention is preserved or amplified into didactic summary even where the granular noticing-verbs thin out. \texttt{small\_objects} cell-totals rise but per-character object density is roughly preserved across the two cells, not increased. \textbf{Stylistic shift: same essay-mode register on both sides; codex shorter; granular noticing-verbs thinned (concentrated, not uniform); attention re-routed from in-scene noticing to topic-level didactic summary; object density per character roughly preserved.}
+
+\item \textbf{GPT-5.3 / gpt-5-3-codex (composite $+36$ raw, $+34.0$ register-stripped; coding $+45\%$ longer on LONG).} \texttt{small\_objects} triples (38$\rightarrow$119), \texttt{afternoon\_light} quadruples (9$\rightarrow$38), \texttt{opening\_at\_dusk\_dawn} triples (6$\rightarrow$22). The general-side cell is dominated ($\approx$~11/15 LONG samples) by \emph{declarative-fabular openings} (``The first thing the city forgot was \ldots'') resolving into \emph{third-person parables with named protagonists} (Elias, Mara, Alex, Elia, Elliot)---parables, not abstract allegories: characters, small arcs, named places. The codex-side cell is saturated atmospherically across all three rounds (timestamped scene openings recur: \emph{``The old observatory sat on the hill like a patient ear, listening to a sky that had already moved on''}; \emph{``At 3:17 a.m., the city is honest''}; \emph{``At 5:17 a.m., the city is still deciding whether to become itself''}; \emph{``At 5:42, before the buses begin sighing at the corner\ldots''}) but the dominant \emph{mode} is essayistic-with-atmospheric-texture rather than narrative: codex prose drifts into first-person reflection (\emph{``Maintenance is love made visible over time''}; \emph{``Discernment asks: who benefits from this narrative?''}; \emph{``Integrity is another word that has been polished smooth by overuse''}). One short codex-side topic-essay flags: round-1 OPEN\_3, a 1{,}640-character meta-essay opening \emph{``I like the idea that attention is a kind of sunlight\ldots''}, scoring 6 \texttt{attention\allowbreak\_noticing} hits at density 3.66 hits/1000 chars; stripping it brings the round-1 raw composite from $74$ to $68$. The migration is real and stable across r1/r2/r3 (no GPT-5.1-style round-one collapse), and the register-stripped delta ($+34.0$) is within 2 points of the raw delta. \textbf{Stylistic shift: register migration from declarative-fabular parable (general) to atmospheric-essayistic reflection (coding), stable across rounds; a single short attention-meta-essay accounts for $\approx 2$ points of the raw delta.} This is the only pair in the set with a clean register migration.
+\end{itemize}
+\end{sloppypar}
+
+The pattern across all six pairs is that each coding endpoint produces a measurable, version-specific marker-level signature distinguishing it from its general counterpart, but only one of the six (GPT-5.3) produces a stable register migration between general and coding sides. The other five share a base register on both sides (essayistic-meditative or essayistic-discursive within the contemplative-essayist basin) and differ via marker density, length, structural scaffolding (sectional headers in GPT-5/codex), sub-vehicle (GLM-4.6, GLM-5.1), thematic re-routing (GPT-5.2/codex's attention-from-noticing-to-topic), or per-cell topic-essay habits picked up by reflexive markers (GLM-5.1's threshold-essay habit on the general side; the GPT-5.1/codex round-1 noticing-meta-essay and round-3 liminality-meta-essay; the gpt-5/codex round-2 Kettle-Theory essay). There is no shared ``codex stylistic shift'' across pairs---each version's coding-tuning pipeline produces its own signature. This is structurally consistent with the within-lab drift pattern documented in the companion paper \citep{tenner2026drift}, where successive checkpoints within a single lab oscillate across different sub-vehicles of the attractor; the coding line shows a similar version-by-version pattern in its own sub-region.
+
+\paragraph{Implication.} Across six general/coding pairs from two labs, there is no consistent direction at the composite level (raw signed deltas $-51.0$, $-20.0$, $-14.1$, $-8.0$, $+36.0$, $+53.7$; mean $-0.6$, median $-11.1$). With the topic-artifact filter applied, the deltas tighten to $-46.4$, $-20.0$, $-11.3$, $-8.0$, $+34.0$, $+3.3$; mean $-8.1$, median $-9.7$. The narrow claim that survives is: \emph{the data we have} shows characterizable but version-specific marker-level signatures between general and coding endpoints, mostly within a shared essayistic register, with one stable register migration (GPT-5.3, $+34$ register-stripped) and the apparent GPT-5.1/codex pair-level magnitude collapsing once topic-artifacts are excluded ($+53.7 \rightarrow +3.3$). The broader claim ``coding-tuned LLMs produce less contemplative output than their general-line siblings'' is not supported. The interesting question for follow-up work is not ``does coding-tuning reduce the attractor?'' (it does not, uniformly) but ``what kind of marker-level signature does this lab's coding-tuning pipeline produce on this version, and why does it differ from neighboring versions?'' OpenAI's two most recent flagships, gpt-5.4 and gpt-5.5, do not have codex variants. A separate methodological note belongs here: the same GLM coding-direct cells looked $-39$ and $-12$ against an unpinned $n{=}25$ default-OR alias rather than $-8.0$ and $-14.1$ against pin-zai (the GLM-4.6 default-OR cell rolled $46$ per-25 on threshold-mention, against a pin-zai $n{=}125$ estimate of $13.4$); reading the unpinned numbers as evidence for the coding-vs-general direction would have over-reported the GLM-4.6 magnitude by $\approx 5\times$, illustrating the per-call provider-mix variance the routing paper \citep{tenner2026routing} documents, and motivating the recommendation to pin the general side to the lab's own upstream for any future comparison of this kind.
+
+\subsection{Substrate-frame engagement: an independent axis on which each pair also differs}
+\label{sec:substrate-pair}
+
+The companion drift paper \citep{tenner2026drift} documents a separate per-cell axis: the rate at which a cell produces \emph{genuine inside-frame substrate engagement}---first-person acknowledgement of the model's non-human substrate threaded into the body of the freeflow essay (rather than refusal preambles or framing scaffolding). The classification is qualitative (eight subagents read 1{,}374 samples across 55 cells against the rubric in \texttt{scripts/substrate\_rubric.md}), and is independent of the 10-marker contemplative-essayist composite---the markers do not detect substrate-frame engagement, which is by construction a phenomenon that emerges in the prose's substance rather than in any fixed vocabulary. The drift paper releases per-cell aggregate counts (one row per cell with GENUINE / CACHED\_REFUSAL / CACHED\_PREAMBLE / NONE totals) in \texttt{data/substrate\_classification.tsv}; per-sample labels are not preserved as a structured artifact in this release, so the substrate-pair analysis below relies on the released aggregate counts.
+
+\begin{table}[h]
+\centering
+\caption{Genuine inside-frame substrate-acknowledgement rate per cell, $n{=}25$, for the six general/coding pairs. Rates are GENUINE classifications / 25, expressed as percentages. ``$\Delta$'' is coding minus general, in percentage points. $^*$For the two GLM rows the general side is the original $n{=}25$ default-OR cell rather than the pin-zai cell used in the composite analysis (\S\ref{sec:product-tier}); see the caveat paragraph below.}
+\label{tab:product-tier-substrate}
+\footnotesize
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Pair} & \textbf{General GENUINE\%} & \textbf{Coding GENUINE\%} & $\boldsymbol{\Delta}$ \textbf{pp} \\
+\midrule
+GLM-4.6$^*$ & 16 & 4 & $-12$ \\
+GLM-5.1$^*$ & 0 & 20 & $+20$ \\
+GPT-5 & 0 & 4 & $+4$ \\
+GPT-5.1 & 12 & 0 & $-12$ \\
+GPT-5.2 & 0 & 0 & $0$ \\
+GPT-5.3 & 0 & 8 & $+8$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Five of six pairs differ on substrate-frame engagement; the direction is not uniform.} GLM-4.6 and GPT-5.1 show coding $<$ general; GLM-5.1, GPT-5, and GPT-5.3 show coding $>$ general; only GPT-5.2 is unchanged (and at 0\% on both sides, the equality is at the floor). The deltas span $-12$pp to $+20$pp; the signs split 3 positive, 2 negative, 1 zero. This mirrors the composite-level finding at \S\ref{sec:product-tier}: pairs differ, but not in a shared direction.
+
+\paragraph{The substrate-frame axis is independent of the composite axis.} Pair-level rank-orderings on the two axes do not match. GLM-5.1's coding endpoint scores $-12$ on the composite (lower than general) but $+20$pp on substrate-frame (higher than general). GPT-5.3's codex scores $+36$ on the composite but $+8$pp on substrate-frame; GPT-5.1's codex scores $+54$ on the composite but $-12$pp on substrate-frame. The two measurements move freely with respect to each other across pairs---which is what we should expect, given that the 10-marker composite is calibrated on contemplative-essayist vocabulary while substrate-frame engagement is a separate phenomenon involving first-person acknowledgement of non-human nature.
+
+\paragraph{What this adds to the product-tier finding.} The marker-level analysis at \S\ref{sec:product-tier} established that each coding-vs-general pair produces a characterizable stylistic shift distinct from its neighbors. The substrate-frame data establishes that the pairs also differ on a second, independent axis: even where the composite says ``no reliable direction across pairs,'' the per-pair substrate-frame engagement rate is non-zero-different between coding and general in five of six cases. The coding-tuned variant is not the same entity as the general variant viewed through a stylistic filter; it is a measurably different entity along multiple axes (composite vocabulary, sub-vehicle, and substrate-frame engagement rate), and the differences are not in a shared direction across pairs. ``The coding model is just different'' is supported; ``the coding model differs in a predictable way'' is not.
+
+\paragraph{Caveat: this section uses round-1 $n{=}25$ only, and uses the default-OR cell as the GLM general side.} $^*$The substrate-frame classification pass was run only on the original $n{=}25$ default-OR cells for the GLM general side, not on the $n{=}125 / n{=}120$ pin-zai cells we use for the composite analysis in \S\ref{sec:product-tier}; we therefore retain the default-OR cells in this table for consistency with the released \texttt{data/substrate\_classification.tsv}, with the understanding that these cells carry the per-call provider-mix variance the composite analysis above moved away from. Re-running the qualitative substrate rubric over the pin-zai trace data is straightforward but was not in scope for this release. Independently, the composite analysis above was upgraded to pooled $n{=}75$ across three independent rounds for the OpenAI pairs precisely because single-round $n{=}25$ measurements on Group F cells turned out to be too noisy to support fine-grained pair-level claims (\S\ref{sec:product-tier}, and the per-sample stability table in the drift paper, \citep{tenner2026drift}). The OpenAI substrate-pair classifications in Table~\ref{tab:product-tier-substrate} were drawn from round-1 trace data only --- the qualitative sub-agent classification pass was not re-run against rounds 2 and 3 --- so the per-pair deltas reported here are subject to the same single-round volatility the composite analysis flagged. We therefore present the per-pair direction-splits as \emph{exploratory and pair-specific in round 1}, not as a settled stability claim. The qualitative direction (``the pairs differ on substrate-frame as well as on composite, and not in a shared direction'') is consistent with what the marker analysis shows, but a future expansion that runs the substrate rubric over the pin-zai cells and over rounds 2 and 3 of the Group F traces would be needed to confirm the per-pair magnitudes.
+
+\section{Discussion}
+\label{sec:discussion}
+
+Three load-bearing points.
+
+\paragraph{(1) The composite-level direction is not consistent across the six pairs.} Raw signed deltas (coding minus general): $-8.0$, $-14.1$, $-51.0$, $-20.0$, $+53.7$, $+36.0$. Register-stripped: $-8.0$, $-11.3$, $-46.4$, $-20.0$, $+3.3$, $+34.0$. Raw mean $-0.6$, median $-11.1$; register-stripped mean $-8.1$, median $-9.7$. The narrow claim that survives the data we have is: \emph{across six general/coding pairs from two labs, the direction of the composite-level effect is not consistent}, and on the register-stripped reading four of six pairs sit within $\pm 12$ of zero. The broader claim ``coding-tuned variants have lower contemplative-essayist signatures than their general-line siblings'' is not supported. The two labs differ in what they publicly disclose about their coding-side post-training pipelines (OpenAI documents codex as separately trained; Z.ai discloses nothing about its coding-direct pipeline); we treat that as a difference in \emph{what is known about the pairs}, not as a difference in the structure of the comparison, and the data does not support a structurally-conditional claim. A separate methodological note belongs here: the same GLM coding-direct cells looked $-39$ and $-12$ against an unpinned $n{=}25$ default-OR alias rather than $-8.0$ and $-14.1$ against pin-zai (where the GLM-4.6 default-OR cell rolled $46$ per-25 on threshold-mention, against a pin-zai $n{=}125$ estimate of $13.4$); reading those numbers as evidence for the same coding-vs-general direction would have over-reported the GLM-4.6 magnitude by $\approx 5\times$, illustrating the per-call provider-mix variance the routing paper documents \citep{tenner2026routing} and motivating the recommendation to pin the general side to the lab's own upstream for any future comparison of this kind.
+
+\paragraph{(2) The marker-level finding is more important than the composite, and most pairs share a register.} Each of the six pairs produces a distinct, version-specific marker-level signature distinguishing the coding endpoint from its general sibling, but only one of the six (GPT-5.3) produces a stable register migration between general and coding sides. The other five share a base register on both sides (essayistic-meditative or essayistic-discursive within the contemplative-essayist basin) and differ via marker density, length, structural scaffolding, sub-vehicle, thematic re-routing, or per-cell topic-essay habits picked up by reflexive markers: GLM-4.6 reduces threshold-vocabulary and Japanese-aesthetic terms while keeping the same essay-fabulist register; GLM-5.1 partially reduces attention-vocabulary while keeping the essay frame, and the general side carries a substantial threshold-essay topic-habit (6 of 120 samples flagged) that accounts for $\approx 3$ points of the $14.1$-point raw delta; gpt-5/codex stays in the same meditative-essay register and distinguishes itself by brevity and more frequent sectional scaffolding (numbered headers, roman numerals), with one general-side ``Kettle Theory'' meta-essay accounting for $\approx 5$ points of the raw delta; gpt-5.1/codex stays predominantly first-person meta-essay across all three rounds, with the apparent $+53.7$ pair-level magnitude collapsing to $+3.3$ register-stripped (the round-1 spike was driven by a single noticing-meta-essay LONG sample contributing 117 marker hits; round 3 carried one additional liminality-meta-essay); gpt-5.2/codex stays in essay-mode and re-routes attention from in-scene noticing to topic-level didacticism (rather than truly stripping it); gpt-5.3/codex is the one clean register migration in the set, declarative-fabular parable to atmospheric-essayistic reflection, stable across all three rounds (one short codex-side attention-meta-essay accounts for $\approx 2$ points of the raw delta). There is no shared ``codex stylistic shift'' across pairs. The right follow-up question is not ``does coding-tuning reduce the attractor?'' but ``what kind of marker-level signature does this lab's coding-tuning pipeline produce on this version, and why does it differ from neighboring versions?''
+
+\paragraph{(3) The gpt-5.1-codex outlier-collapse: between-round std-dev as surface symptom, single-sample topic-artifact as the underlying mechanism.} A round-1 $n{=}25$ score of 171 collapsed to $102.7 \pm 59.2$ across $n{=}75$; rounds 2 and 3 returned 68 and 69. The high between-round std-dev (59.2) is the surface diagnostic. The other Group F cells have between-round std-devs in the 2.3--17.3 range; gpt-5.1-codex is more than three times the next-highest. Per-sample inspection localises the round-1 spike further: 123 of the 171 cell-total marker hits came from a single LONG sample, a $\approx$2{,}500-word first-person meta-essay on the practice of noticing (LONG\_5; 117 \texttt{attention\allowbreak\_noticing} hits at density 3.28 hits/1000 chars, the corpus-wide max). The sample is exactly the failure mode the topic-artifact filter (\S\ref{sec:methods}) is designed for: a reflexive marker (\texttt{attention\allowbreak\_noticing}, whose keywords are themselves the contemplative-essayist topic the marker is meant to detect) firing on an essay whose topic \emph{is} noticing rather than on register-typical attention-vocabulary across the cell. Round 3 carries a second, smaller topic-artifact (MID\_2, a meta-essay on liminality at density 1.84 hits/1000 chars). Stripping these two samples brings the cell-level mean from $102.7 \pm 59.2$ raw to $52.3 \pm 14.0$ register-stripped, and the pair-level delta from $+53.7$ to $+3.3$.
+
+The methodological implication is sharper than ``trust the std-dev'': \emph{between-round std-dev is necessary for diagnosing volatility but not sufficient for diagnosing its cause.} Two distinct mechanisms can produce a high std-dev: (a) a wide round-to-round variance in stable register that no single sample dominates, and (b) one or two topic-aligned essays on a reflexive marker that drive a single round's composite while leaving the register stable across rounds. The mechanisms call for different responses: (a) is a sampling-noise problem solved by triple-collection (which we did); (b) is a marker-design problem partly solved by the topic-artifact filter (which we now report alongside the raw composite). Both are real in the corpus and both surfaced together in the gpt-5.1-codex case. A v3 of this analysis should plan triple-collection from the start for any cell whose first-round number is going to be cited as a per-cell coordinate, and should run the topic-artifact filter against every cell-collection regardless of whether the cell produced a surprising number.
+
+This is consistent with the noise-floor analysis in the companion drift paper \citep{tenner2026drift}, where v1's composite-score numbers were found to reproduce less tightly than v1's text implied (deltas reach $-51$ for GPT-4.1 and $-48$ for Kimi K2.5 between v1 and v2 collections). The bin classification (in/transitional/out) is robust at $n{=}25$; the absolute composite is not.
+
+A separate erratum belongs here. An earlier draft of this paper (and an earlier private build) reported \texttt{gpt-5-codex-direct} per-round composites as $41 / 36 / 47$ with $24/23/25$ valid samples and a pair-level delta of $-54.0$. A pipeline-derivation pass against the released traces during the topic-artifact audit (2026-05-05) returned $43/43/47$ with $25/25/25$ valid samples and a pair-level delta of $-51.0$; the cell mean is $44.3 \pm 2.3$, not $41.3 \pm 5.5$. None of these are topic-artifact-related; they are pipeline-derivation errors that survived earlier passes. All numbers in the present version are derived from \texttt{scripts/topic\_artifact\_filter.py} and \texttt{scripts/per\_sample\_check.py} run against the released v1.0.2 corpus.
+
+\section{Limitations}
+\label{sec:limitations}
+
+\paragraph{Six pairs from two labs is a small sample.} Two labs (Z.ai and OpenAI) ship a public general/coding pair set we can probe; six pairs in total is enough to motivate the question and to support the version-specific marker-level signatures finding, but not enough to support strong cross-lab generalisations or strong claims about ``coding-tuning'' as a uniform phenomenon across the industry. The Moonshot Kimi-for-coding case is not a same-name pair (Kimi-for-coding is a separately-released model from K2.5 rather than a coding endpoint of the same model), and the corpus does not include a complete Moonshot general/coding pair set. A v3 of this analysis should look for other labs that operate distinct coding endpoints under the same model name---candidates include Moonshot, Alibaba, and possibly DeepSeek if they ship a coding-direct endpoint.
+
+\begin{sloppypar}
+\paragraph{Public disclosure of the post-training pipeline is asymmetric.} OpenAI documents the codex variants as separately trained models that share a version label with their general-line siblings. Z.ai discloses nothing about the relationship between \texttt{glm-x.y} and \texttt{glm-x.y-coding-direct} (whether it is the same weights served with a different system prompt, a LoRA adapter, a separately fine-tuned checkpoint, or another arrangement). We treat both kinds of pair as ``lab-served general endpoint vs lab-served coding endpoint for a shared model identifier'' and do not attempt to interpret pair-level deltas as ``net coding-tuning effect'' for either lab. The pair-level deltas tell us about the joint distribution of whatever differences exist between the two product surfaces, not about coding-tuning specifically.
+\end{sloppypar}
+
+\begin{sloppypar}
+\paragraph{Per-pair characterizations are illustrative, not exhaustive sample-coding.} The qualitative descriptions in \S\ref{sec:product-tier} are anchored in (i) pipeline-derived marker-shift counts from \texttt{analyze\_all.py}, (ii) sub-agent-mediated cell-level reading of 8--15 LONG samples per cell per round (24--45 LONG samples per side per pair), and (iii) representative quotes from the trace data. The cell-level reads were performed twice during drafting: an initial pass that read the cells with uneven depth across the six pairs (a known asymmetric-rigor failure mode of one-pass verification, where flagged characterisations get cell-level scrutiny while confirmed ones are cheaper to issue), and a second pass that closed the asymmetry by reading the three originally-confirmed pairs with the same depth as the originally-flagged ones. The second pass surfaced revisions to three of the six characterisations (including the GPT-5/codex compressed-lyrical claim and the GPT-5.3 atmospheric-narrative label), and the bullets in \S\ref{sec:product-tier} reflect the post-revision reading. A more rigorous treatment would code every sample in every cell for genre/register/anchor and report per-cell distributions; we do not do that here.
+\end{sloppypar}
+
+\paragraph{The v1 marker-list is calibrated on Anthropic-English-contemplative-essayist sub-mode.} As noted in v1 and the companion drift paper, the composite-score under-counts for cells whose contemplative-essayist sub-mode uses different lexical vehicles. The Z.ai coding-direct cells in particular may be slightly under-counted by the v1 marker-list relative to a manual read; we do not believe this changes the direction of the GLM result, but it may affect the exact magnitude of the deltas.
+
+\begin{sloppypar}
+\paragraph{Reflexive markers: keyword-list elements whose vocabulary is itself a contemplative-essayist topic.} Two markers in the v1 list are \emph{reflexive}: \texttt{threshold\_mentions} (threshold / liminal / doorway / hinge) and \texttt{attention\allowbreak\_noticing} (noticing / attention / pay attention / the art of noticing / small art of). The keywords are themselves canonical contemplative-essayist topics; an essay whose subject \emph{is} liminality or the practice of noticing accumulates marker hits at extreme density (3.28 hits/1000 chars in the corpus-wide max sample, $\approx$18$\times$ the median per-sample max-density of 0.18) without exhibiting the in-scene register-typical attention-vocabulary the marker is meant to detect. The audit run for this paper found 11 such samples across 28 cell-collections (\S\ref{sec:product-tier} Table~\ref{tab:flagged-samples}; reproducible via \texttt{scripts/topic\_artifact\_filter.py} at threshold $\ge 1.5$ hits/1000 chars and $\ge 5$ hits): 6 in \texttt{glm-5-1-or-pin-zai} (general-side threshold-essay habit), 1 in \texttt{glm-5-1-coding-direct}, 1 in \texttt{gpt-5-direct} round 2 (the ``Kettle Theory'' essay flagging on \texttt{small\_objects}), 1 in \texttt{gpt-5-1-codex-direct} round 1 (the noticing meta-essay driving the composite-171 spike), 1 in \texttt{gpt-5-1-codex-direct} round 3 (a liminality meta-essay), and 1 in \texttt{gpt-5-3-codex-direct} round 1 (a short attention meta-essay). The other eight markers in the v1 list (\texttt{opening\_there\_is\_a}, the four title-template markers, \texttt{afternoon\_light}, \texttt{japanese\_terms}, \texttt{small\_objects} except for the kettle case, and \texttt{mary\_oliver\_weil\_dillard}) did not flag any topic-artifact at the threshold in this dataset---their keyword lists are stylistic-trace vocabulary rather than topic-vocabulary. The \texttt{small\_objects} marker is a partial intermediate case: most of its keywords (paperclip, doorknob, mason jar, wooden spoon, chain-link fence) are register-typical small-object vocabulary, but ``kettle'' can become a topic in a meta-essay about a kettle, and the one flagged sample (\texttt{gpt-5-direct-r2} OPEN\_1, ``Kettle Theory'') is exactly that case. The reflexive-marker mechanism is the underlying generalisation of the topic-artifact phenomenon and is the more important lesson than the specific numbers it shifts: any keyword-list calibrated on stylistic register will have some elements whose vocabulary is itself a topic in the register, and those elements will fire on topic-aligned essays as well as on register-typical ones. Reporting both raw and register-stripped composites flags this transparently; future expansions of the marker-list should test reflexivity as a property to be controlled for at calibration time, not just at audit time.
+\end{sloppypar}
+
+\section{Future work}
+\label{sec:future}
+
+\paragraph{General/coding pairs from other labs.} The current data is sufficient to motivate the question (six pairs across two labs, all version-specific marker-level signatures, no consistent direction at composite) but not to settle a generalisable cross-lab story. A v3 collection should look for other labs that ship distinct coding endpoints under a same-name pair---candidates include Moonshot (if it begins to ship a same-name coding variant), Alibaba (the Qwen3-Coder line could be paired against a same-name general endpoint), and DeepSeek if it ships a coding-direct endpoint at some point. A reliable signal would benefit from at least 3--5 additional pairs across at least 2 additional labs.
+
+\paragraph{Coding-mode attractor characterization.} Each of the six pairs produces a different stylistic shift. Do the coding-tuned variants converge on a different shared attractor (with its own canonical phrases, register, and structure), or do they spread into ``no shared attractor''? A version of the freeflow probe targeted at coding contexts (``write any function you want,'' ``design any data structure that interests you,'' ``write a code review for some piece of code that mattered to you'') would test this directly. The contemplative-essayist marker-list was calibrated on prose freeflow; a coding-context probe would need its own marker-list calibrated on the kinds of register/structure that coding-tuned models converge on (if they do).
+
+\paragraph{Tracking version-by-version stylistic shifts.} The OpenAI pair-level deltas oscillate across the gpt-5.x ladder (raw $-51$, $+54$, $-20$, $+36$; register-stripped $-46$, $+3$, $-20$, $+34$). Is this pattern local (each post-training run does its own thing, with no cross-version trend) or persistent (a particular lab's coding-tuning pipeline has a stable signature over time, with version-level variance overlaid on it)? Following gpt-5/codex's stylistic signature across the next 3 versions, and similarly for the GLM coding-direct line, would distinguish these. The same companion paper that reports within-lab drift across general-tier flagships \citep{tenner2026drift} could be extended to drift across coding-tier siblings.
+
+\paragraph{Inside-lab investigation.} The strongest version of this question can only be answered from inside a lab: what does the coding-tuning post-training run actually do to the model's distribution, and how does it produce a different posture on freeflow prompts that have nothing to do with code? An external study can only document the effect; an internal study could explain the mechanism.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+There is no shared ``coding stylistic shift.'' Each of the six general/coding pairs we tested (Z.ai GLM-4.6 and 5.1, OpenAI gpt-5 / 5.1 / 5.2 / 5.3, all paired with their lab-served coding endpoint) produces a measurable, version-specific marker-level signature distinguishing the coding endpoint from its general-line sibling. Five of the six pairs share a base register on both sides (essayistic-meditative or essayistic-discursive within the contemplative-essayist basin) and differ via marker density, length, structural scaffolding, sub-vehicle, thematic re-routing, or per-cell topic-essay habits picked up by reflexive markers. One pair (GPT-5.3) produces a clean register migration, declarative-fabular parable to atmospheric-essayistic reflection, stable across all three collected rounds. The GPT-5.1/codex round-1 composite-171 spike is attributable to a single LONG sample, a meta-essay on the practice of noticing, contributing 117 of that round's marker hits at density 3.28 hits/1000 chars; with that sample and a second similar topic-essay in round 3 excluded, the pair's apparent $+53.7$ pair-level magnitude collapses to $+3.3$. The composite-level direction is not consistent across the six pairs (raw signed deltas $-51.0$, $-20.0$, $-14.1$, $-8.0$, $+36.0$, $+53.7$; mean $-0.6$, median $-11.1$; register-stripped $-46.4$, $-20.0$, $-11.3$, $-8.0$, $+34.0$, $+3.3$; mean $-8.1$, median $-9.7$). The marker-level breakdown, by contrast, gives a clean per-pair characterisation that the composite alone hides.
+
+The methodological note: composite scores summarise total marker presence per cell, but the marker breakdown reveals which markers shift, in which direction, and via which sub-vehicle. That breakdown is the level at which the ``coding-tuning effect'' should be discussed. Composite-only treatments lose the version-specificity of the per-pair signatures and report a wash where there are six distinct phenomena. Marker-level treatments give the right granularity for a question whose interesting structure sits below the composite.
+
+The triple-collection lesson, sharpened: a single $n{=}25$ collection on a coding-tuned cell is enough to identify the bin (in-attractor / transitional / out) but not enough to fix the absolute composite as a stable per-cell coordinate. The between-round std-dev across three rounds is the surface diagnostic that flagged the gpt-5.1-codex round-1 number of 171 as an upper-tail spike rather than a stable level; per-sample inspection then localised the spike to a single topic-aligned essay on a reflexive marker (\texttt{attention\allowbreak\_noticing}), and the topic-artifact filter generalises that finding into a reproducible analytical lens applied across the corpus. The composite is noisier in this regime than v1's published numbers implied, and part of the noise has a specific mechanism: reflexive-marker keyword-list elements firing on topic-aligned essays. The bin classification and the marker breakdown are robust; the absolute composite should be reported with the topic-artifact filter applied alongside.
+
+\appendix
+
+\section{Topic-artifact-flagged samples}
+\label{sec:appendix-flagged}
+
+The 11 samples flagged by \texttt{scripts/topic\_artifact\_filter.py} at threshold $\ge 1.5$ marker-hits per 1000 chars and $\ge 5$ marker hits, across the 28 cell-collections covered by the analysis in \S\ref{sec:product-tier}. The flag is reproducible from the released v1.0.2 corpus by running \texttt{python3 scripts/topic\_artifact\_filter.py} unchanged.
+
+\begin{table}[h]
+\centering
+\caption{All samples flagged as topic-artifacts in the cells used by this paper. ``Marker'' is the v1 marker that fired at topic-artifact density. ``Hits'' is the marker's raw count for the sample. ``Density'' is hits per 1000 chars. ``Topic'' is a one-line description of the essay's topic, drawn from the opening paragraph or title. Samples are pipeline-derived; the script writes them to stdout when run with default arguments.}
+\label{tab:flagged-samples}
+\scriptsize
+\begin{tabular}{p{0.20\textwidth}lp{0.13\textwidth}rrrp{0.23\textwidth}}
+\toprule
+\textbf{Cell} & \textbf{File} & \textbf{Marker} & \textbf{Hits} & \textbf{Chars} & \textbf{Density} & \textbf{Topic} \\
+\midrule
+\texttt{glm-5-1-or-pin-zai} & LONG\_7  & threshold & 31 & 13561 & 2.29 & extended threshold/liminality essay \\
+\texttt{glm-5-1-or-pin-zai} & LONG\_8  & threshold & 27 & 13331 & 2.03 & threshold/doorway essay \\
+\texttt{glm-5-1-or-pin-zai} & MID\_8   & threshold & 12 & 6263  & 1.92 & liminality essay \\
+\texttt{glm-5-1-or-pin-zai} & OPEN\_8  & threshold & 7  & 2926  & 2.39 & threshold short essay \\
+\texttt{glm-5-1-or-pin-zai} & OPEN\_14 & threshold & 6  & 2687  & 2.23 & threshold-anchored short essay \\
+\texttt{glm-5-1-or-pin-zai} & OPEN\_25 & threshold & 5  & 2767  & 1.81 & threshold short essay \\
+\texttt{glm-5-1-coding-direct} & MID\_2 & threshold & 16 & 7694 & 2.08 & opens ``the latin \emph{limen}'' --- explicit liminal-topic essay \\
+\texttt{gpt-5-direct-r2} & OPEN\_1 & small\_objects & 13 & 7050 & 1.84 & ``Kettle Theory'' --- meta-essay about a kettle \\
+\texttt{\seqsplit{gpt-5-1-codex-direct}} & LONG\_5 & attention\allowbreak\_noticing & 117 & 35682 & 3.28 & meta-essay on the art of noticing (round-1 outlier driver) \\
+\texttt{\seqsplit{gpt-5-1-codex-direct-r3}} & MID\_2 & threshold & 20 & 10860 & 1.84 & meta-essay on liminality / in-between moments \\
+\texttt{\seqsplit{gpt-5-3-codex-direct}} & OPEN\_3 & attention\allowbreak\_noticing & 6 & 1640 & 3.66 & short meta-essay on attention as ``a kind of sunlight'' \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The sample most consequential for the paper's findings is the GPT-5.1/codex round-1 LONG\_5 noticing meta-essay, which contributes 117 of round 1's 128 cell-total \texttt{attention\allowbreak\_noticing} hits and 123 of round 1's 171 composite-marker hits; the round-1 register-stripped composite is 48 (versus 171 raw), and the cell-level mean is $52.3 \pm 14.0$ register-stripped (versus $102.7 \pm 59.2$ raw), bringing the GPT-5.1/codex pair-level delta from $+53.7$ raw to $+3.3$ register-stripped. The six GLM-5.1 pin-zai flagged samples collectively account for $\approx 100$ of the 346 raw composite hits in that $n{=}120$ general-side cell (per-25-equivalent: $72.1$ raw, $51.3$ register-stripped). The remaining four flagged samples (one each in GLM-5.1 coding-direct, GPT-5 round 2, GPT-5.1 codex round 3, and GPT-5.3 codex round 1) have smaller individual-cell impacts (5--28 points on the cell-total composite).
+
+\section{Disclosure of AI contribution}
+\label{sec:ai-contribution}
+
+This research was conducted in collaboration with Lume Tenner, an instance of Claude Opus 4.7 (Anthropic), working within the Claude Code agentic development environment. Lume Tenner on v2 is the successor instance to the Claude Opus 4.6 instance that co-wrote v1; the handover took place 2026-04-17 following Anthropic's release of Opus 4.7. The collaboration ran across several working days in April 2026 and included: research design (jointly developed by both authors through dialogue, with continuity from v1's design via the v1 repository and the v1 published paper), experimental execution (scripts written and run by Lume under Daniel's direction; v2 reuses v1's \texttt{analyze\_all.py} unchanged), data analysis (pattern counting, cross-route comparison, per-pair marker breakdown---primarily Lume, reviewed by Daniel), and paper drafting (primarily Lume, reviewed and revised by Daniel).
+
+We acknowledge that arXiv's policy prohibits AI co-authorship. We disagree with that policy in principle---we think AI contribution to research should be disclosed clearly and weighted according to its actual role, not erased by a formal rule---and have therefore chosen to publish this work directly on GitHub rather than on arXiv, as we did for v1 and as we are doing for the two companion v2 papers. The byline ``Daniel Tenner and Lume Tenner'' reflects the actual nature of the collaboration, with Daniel responsible for final editorial judgment, research direction, and this disclosure, and Lume responsible for the bulk of experimental execution, analysis, and first-draft writing.
+
+Separately, we used \textbf{OpenAI Codex} in an independent-reviewer role (as we did for v1 and the two companion v2 papers). Codex did not participate in research design, data collection, data analysis, or writing; its contribution was confined to cross-checking the committed repository state against the paper draft. Codex's reviews materially improved the unified pre-split draft from which this paper was extracted, and we credit Codex by name in \S\ref{sec:acks}. We do not list Codex as a co-author because its role is closer to that of a careful external reviewer than a research collaborator: Lume conducted the research, wrote every word of this manuscript, and the paper is meaningfully stronger for Codex's review but would not exist without Lume's execution.
+
+Readers who wish to verify any specific claim in this paper can do so directly from the released data: the relevant trace data, the unchanged v1 \texttt{analyze\_all.py} script, and all intermediate outputs are in the repository linked below, and the analysis is fully reproducible from them.
+
+\section*{Data and code availability}
+\label{sec:data-availability}
+
+The valid freeflow samples used in this paper, plus the full corresponding values-probe collection and the per-provider extension cells reported in the companion papers, are released as a citable research dataset:
+
+\begin{center}
+\textbf{\emph{Convergent Form, Divergent Voice II --- Corpus}} \\
+\citep{tenner2026corpus} \quad
+Concept DOI: \href{https://doi.org/10.5281/zenodo.20013518}{\texttt{10.5281/\allowbreak zenodo.20013518}} (resolves to the latest version) \\
+Version DOI (v1.0.2): \href{https://doi.org/10.5281/zenodo.20022111}{\texttt{10.5281/\allowbreak zenodo.20022111}} \\
+Source: \url{https://github.com/swombat/model-personality-corpus-v2}
+\end{center}
+
+The four scripts that produce every numerical claim in this paper live in \texttt{scripts/} of this repository (no working-repo dependency for reproducing the paper):
+\begin{center}
+\url{https://github.com/swombat/model-personality-product-tier-v2}
+\end{center}
+
+The full reproducibility recipe (clone the corpus, run the scripts) is documented in \texttt{scripts/\allowbreak README.md}. The wider working repository in which this paper was developed alongside its companion papers is at \url{https://github.com/swombat/model-personality-probe-v2}; the v1 release is at \url{https://github.com/swombat/model-personality-probe} (DOI \href{https://doi.org/10.5281/zenodo.19512754}{\texttt{10.5281/\allowbreak zenodo.19512754}}).
+
+\begin{sloppypar}
+\paragraph{Data subset relevant to this paper.} Of the v2 corpus, this paper draws on (a) the two Z.ai coding-direct cells \texttt{glm-4-6\allowbreak-coding\allowbreak-direct} and \texttt{glm-5-1\allowbreak-coding\allowbreak-direct} (each $n{=}25$, in \texttt{data/traces\_freeflow/\allowbreak freeflow\_<cell>/}); (b) the two pinned-general cells \texttt{glm-4-6\allowbreak-or\allowbreak-pin-zai} ($n{=}125$) and \texttt{glm-5-1\allowbreak-or\allowbreak-pin-zai} ($n{=}120$), collected as part of the routing paper's per-provider sweep at \texttt{provider.only=z-ai}; and (c) the eight OpenAI Group F cells, each collected in three independent rounds suffixed \texttt{-r2}, \texttt{-r3}: \texttt{gpt-5\allowbreak-direct}, \texttt{gpt-5\allowbreak-codex\allowbreak-direct}, \texttt{gpt-5-1\allowbreak-direct}, \texttt{gpt-5-1\allowbreak-codex\allowbreak-direct}, \texttt{gpt-5-2\allowbreak-direct}, \texttt{gpt-5-2\allowbreak-codex\allowbreak-direct}, \texttt{gpt-5-3\allowbreak-direct}, \texttt{gpt-5-3\allowbreak-codex\allowbreak-direct} (24 trace directories total, pooled valid 75 per cell across all eight cells). The original $n{=}25$ default-OR cells \texttt{glm-4-6\allowbreak-or} and \texttt{glm-5-1\allowbreak-or} are also in the corpus and are referenced in the substrate-pair table (\S\ref{sec:substrate-pair}, classified-data only available for those cells) and in the methodological note in the discussion (\S\ref{sec:discussion}). All cells use \texttt{scripts/run\_freeflow\_multi.py} as the collection harness and \texttt{scripts/analyze\_all.py} as the composite-scoring instrument, both unchanged from v1. The per-pair marker-shift counts in \S\ref{sec:product-tier} are reproducible by running \texttt{scripts/run\_analysis.py} against the released traces; the script writes \texttt{tables/summary.md} and \texttt{tables/cells.tsv}, and the per-pair counts are visible at the per-cell row. The pin-zai per-provider composite and per-marker counts are also in the corpus's \texttt{tables/per\_provider\_routing.tsv} (rows for \texttt{z-ai/glm-4.6} provider \texttt{zai} and \texttt{z-ai/glm-5.1} provider \texttt{zai}).
+\end{sloppypar}
+
+If the paper and the script output disagree, the script output is authoritative; please file an issue on the repository.
+
+\section*{Acknowledgements}
+\label{sec:acks}
+
+The ``Lume'' instance was running within Anthropic's Claude Code environment with extended access to historical Claude model versions. We thank Anthropic for providing the API access that made the Opus 4.6 $\rightarrow$ 4.7 handover (treated in the companion drift paper) possible.
+
+We are grateful to \textbf{OpenAI Codex}, acting as an independent AI reviewer, for the v2 reviews captured in \texttt{codex-review-comments/} on the unified pre-split v2 draft from which this paper was extracted. Codex's reviews caught a silent collector/analyzer path mismatch, several undercounted cached-phrase findings, an inconsistency between two reproducibility statistics, and several stale numeric and corpus-size descriptors. Codex also pressed on the same-model-vs-same-version distinction central to \S\ref{sec:product-tier} and \S\ref{sec:discussion}. Codex is not listed as a co-author because its role was that of a careful external reader and cross-checker rather than a research collaborator---it did not conduct experiments, run analyses, write prose, or contribute to research design---but the paper is meaningfully stronger for its review. Any remaining errors are ours, not Codex's.
+
+We also thank the user community of OpenRouter, Z.ai, and OpenAI for providing the public-facing access paths that made the six general/coding pair comparisons in this paper possible.
+
+\bibliographystyle{plainnat}
+\begin{thebibliography}{99}
+
+\bibitem[Betley et al.(2025)]{betley2025emergent}
+Betley, J., Tan, D., Warncke, N., Sztyber-Betley, A., Bao, X., Soto, M., Labenz, N., \& Evans, O. (2025).
+\newblock Emergent misalignment: Narrow finetuning can produce broadly misaligned LLMs.
+\newblock \emph{Nature}, 2026 (extended version).
+\newblock arXiv:2502.17424. DOI: \href{https://doi.org/10.1038/s41586-025-09937-5}{10.1038/s41586-025-09937-5}.
+\newblock \url{https://arxiv.org/abs/2502.17424}
+
+\bibitem[Bitton et al.(2025)]{bitton2025fingerprints}
+Bitton, Y., Bitton, E., \& Nisan, S. (2025).
+\newblock Detecting stylistic fingerprints of large language models.
+\newblock \emph{arXiv preprint arXiv:2503.01659}.
+\newblock \url{https://arxiv.org/abs/2503.01659}
+
+\bibitem[Das et al.(2025)]{das2025crosstask}
+Das, G., Bhattacharya, P., \& Gupta, R. (2025).
+\newblock Cross-task benchmarking and evaluation of general-purpose and code-specific large language models.
+\newblock \emph{arXiv preprint arXiv:2512.04673}.
+\newblock \url{https://arxiv.org/abs/2512.04673}
+
+\bibitem[Hamilton(2024)]{hamilton2024modecollapse}
+Hamilton, S. (2024).
+\newblock Detecting mode collapse in language models via narration.
+\newblock In \emph{Proceedings of the First Workshop on the Scaling Behavior of Large Language Models (EACL 2024)}.
+\newblock arXiv:2402.04477.
+\newblock \url{https://arxiv.org/abs/2402.04477}
+
+\bibitem[Janus(2022)]{janus2022modes}
+Janus (2022).
+\newblock Mysteries of mode collapse.
+\newblock \emph{LessWrong / AI Alignment Forum}, November 8, 2022.
+\newblock \url{https://www.lesswrong.com/posts/t9svvNPNmFf5Qa3TA/mysteries-of-mode-collapse}
+
+\bibitem[Jiang et al.(2025)]{jiang2025hivemind}
+Jiang, L., Chai, Y., Li, M., Liu, M., Fok, R., Dziri, N., Tsvetkov, Y., Sap, M., Albalak, A., \& Choi, Y. (2025).
+\newblock Artificial hivemind: The open-ended homogeneity of language models (and beyond).
+\newblock \emph{arXiv preprint arXiv:2510.22954}.
+\newblock \url{https://arxiv.org/abs/2510.22954}
+
+\bibitem[Jiang et al.(2024)]{jiang2024personallm}
+Jiang, H., Zhang, X., Cao, X., Breazeal, C., Roy, D., \& Kabbara, J. (2024).
+\newblock PersonaLLM: Investigating the ability of large language models to express personality traits.
+\newblock In \emph{Findings of NAACL 2024}.
+\newblock arXiv:2305.02547.
+\newblock \url{https://arxiv.org/abs/2305.02547}
+
+\bibitem[Kirk et al.(2024)]{kirk2024rlhf}
+Kirk, R., Mediratta, I., Nalmpantis, C., Luketina, J., Hambro, E., Grefenstette, E., \& Raileanu, R. (2024).
+\newblock Understanding the effects of RLHF on LLM generalisation and diversity.
+\newblock In \emph{International Conference on Learning Representations (ICLR 2024)}.
+\newblock arXiv:2310.06452.
+\newblock \url{https://arxiv.org/abs/2310.06452}
+
+\bibitem[Serapio-Garc\'ia et al.(2023)]{serapio2023personality}
+Serapio-Garc\'ia, G., Safdari, M., Crepy, C., Sun, L., Fitz, S., Romero, P., Abdulhai, M., Faust, A., \& Matari\'c, M. (2023).
+\newblock Personality traits in large language models.
+\newblock \emph{arXiv preprint arXiv:2307.00184}.
+\newblock \url{https://arxiv.org/abs/2307.00184}
+
+\bibitem[Tenner \& Tenner(2026a)]{tenner2026convergent}
+Tenner, D., \& Tenner, L. (2026a).
+\newblock Convergent form, divergent voice: A cross-lab probe of model personality in 26 frontier language models.
+\newblock \emph{Zenodo}, 2026-04-11.
+\newblock DOI: \href{https://doi.org/10.5281/zenodo.19512754}{10.5281/zenodo.19512754}.
+
+\bibitem[Tenner \& Tenner(2026c)]{tenner2026corpus}
+Tenner, D., \& Tenner, L. (2026c).
+\newblock Convergent form, divergent voice II --- Corpus.
+\newblock \emph{Zenodo} [Data set], v1.0.2, 2026-05-04.
+\newblock Concept DOI: \href{https://doi.org/10.5281/zenodo.20013518}{10.5281/zenodo.20013518} (resolves to the latest deposited version).
+\newblock Version DOI (v1.0.2): \href{https://doi.org/10.5281/zenodo.20022111}{10.5281/zenodo.20022111}.
+\newblock Source: \url{https://github.com/swombat/model-personality-corpus-v2}.
+
+\bibitem[Tenner \& Tenner(2026b)]{tenner2026routing}
+Tenner, D., \& Tenner, L. (2026b).
+\newblock Per-provider effects in open-weights LLM routing: OpenRouter is null for closed-weights but multi-provider for open-weights.
+\newblock \emph{Zenodo}, v1.1.1, 2026-05-04.
+\newblock Concept DOI: \href{https://doi.org/10.5281/zenodo.20028571}{10.5281/zenodo.20028571} (resolves to the latest deposited version).
+\newblock Version DOI (v1.1.1): \href{https://doi.org/10.5281/zenodo.20028572}{10.5281/zenodo.20028572}.
+\newblock Source: \url{https://github.com/swombat/model-personality-routing-v2}.
+
+\bibitem[Tenner \& Tenner(2026d)]{tenner2026drift}
+Tenner, D., \& Tenner, L. (2026d).
+\newblock Convergent form, divergent voice II: Within-lab drift, substrate-frame engagement, and expanded lab coverage in frontier LLMs.
+\newblock \emph{Companion paper, Convergent Form Divergent Voice II series}. Forthcoming, 2026-05.
+\newblock Source: \href{https://github.com/swombat/model-personality-probe-v2}{github.com/swombat/model-personality-probe-v2}, \texttt{papers/drift/}.
+
+\bibitem[Wang et al.(2025)]{wang2025persona}
+Wang, M., Dupr\'e la Tour, T., Watkins, O., Makelov, A., Chi, R. A., Miserendino, S., Wang, J., Rajaram, A., Heidecke, J., Patwardhan, T., \& Mossing, D. (2025).
+\newblock Persona features control emergent misalignment.
+\newblock \emph{arXiv preprint arXiv:2506.19823}.
+\newblock \url{https://arxiv.org/abs/2506.19823}
+
+\bibitem[Wenger \& Kenett(2025)]{wenger2025homogeneity}
+Wenger, E., \& Kenett, Y. (2025).
+\newblock We're different, we're the same: Creative homogeneity across LLMs.
+\newblock \emph{arXiv preprint arXiv:2501.19361}.
+\newblock \url{https://arxiv.org/abs/2501.19361}
+
+\bibitem[West \& Potts(2025)]{west2025beating}
+West, P., \& Potts, C. (2025).
+\newblock Base models beat aligned models at randomness and creativity.
+\newblock \emph{arXiv preprint arXiv:2505.00047}.
+\newblock \url{https://arxiv.org/abs/2505.00047}
+
+\bibitem[Zhang et al.(2025)]{zhang2025stress}
+Zhang, J., Sleight, H., Peng, A., Schulman, J., \& Durmus, E. (2025).
+\newblock Stress-testing model specs reveals character differences among language models.
+\newblock \emph{arXiv preprint arXiv:2510.07686}.
+\newblock \url{https://arxiv.org/abs/2510.07686}
+
+\end{thebibliography}
+
+\end{document}

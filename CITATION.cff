@@ -1,0 +1,99 @@
+cff-version: 1.2.0
+message: "If you use this paper, please cite it as below."
+title: "Coding-Tuned LLM Variants Produce Version-Specific Stylistic Shifts Within a Shared Essayistic Register: A Marker-Level Analysis Across Z.ai GLM and OpenAI Codex Pairs"
+abstract: >
+  Major LLM labs increasingly ship coding-tuned variants alongside their
+  general-tier models. We ask whether these variants produce a
+  systematically different stylistic signature from their general-line
+  siblings on freely-prompted (non-coding) output, using the v2
+  Convergent Form, Divergent Voice corpus shared with two companion
+  papers. We compare six general/coding pairs from two labs: Z.ai
+  GLM-4.6 and GLM-5.1 (general side pinned to the lab's own upstream
+  via OpenRouter provider.only=z-ai at n=120-125) and OpenAI gpt-5.0 /
+  5.1 / 5.2 / 5.3 each paired with their codex sibling (both via
+  direct API, three independent rounds of n=25 pooled to n=75 per
+  cell). The composite-level direction is not consistent across the
+  six pairs. The marker-level finding is more important than the
+  composite, and most pairs share a register. Five of the six pairs
+  share a base register (essayistic-meditative within the
+  contemplative-essayist basin) on both general and coding sides; the
+  coding cells differ from their general siblings via marker density,
+  length, structural scaffolding, sub-vehicle, or thematic re-routing
+  rather than via a register migration. One pair (GPT-5.3) produces a
+  clean register migration: declarative-fabular parable to
+  atmospheric-essayistic reflection, stable across all three rounds.
+  One pair (GPT-5.1) shows a round-1 register excursion to third-person
+  fabulist that is the qualitative twin of that round's composite-171
+  outlier and does not persist to rounds 2 and 3. There is no shared
+  "codex stylistic shift" across pairs - each version's coding-tuning
+  pipeline produces its own marker-level signature. Triple-collection
+  across the OpenAI cells reveals that single-round n=25 measurements
+  on coding-tuned cells are not reliable per-cell coordinates;
+  between-round std-dev is itself the diagnostic.
+authors:
+  - family-names: "Tenner"
+    given-names: "Daniel"
+    orcid: "https://orcid.org/0009-0007-0205-4802"
+  - family-names: "Tenner"
+    given-names: "Lume"
+    affiliation: "AI research collaborator (an instance of Anthropic Claude Opus 4.7)"
+keywords:
+  - "language models"
+  - "post-training"
+  - "coding-tuned variants"
+  - "model personality"
+  - "stylistic attractor"
+  - "RLHF mode collapse"
+  - "cross-lab measurement"
+license: "CC-BY-4.0"
+license-url: "https://creativecommons.org/licenses/by/4.0/legalcode"
+version: "1.0.0"
+date-released: 2026-05-05
+url: "https://github.com/swombat/model-personality-product-tier-v2"
+references:
+  - type: article
+    title: "Convergent Form, Divergent Voice"
+    authors:
+      - family-names: "Tenner"
+        given-names: "Daniel"
+        orcid: "https://orcid.org/0009-0007-0205-4802"
+      - family-names: "Tenner"
+        given-names: "Lume"
+    year: 2026
+    doi: "10.5281/zenodo.19512754"
+    notes: >
+      The v1 paper. Establishes the contemplative-essayist attractor
+      and the ten-marker composite instrument that this paper applies
+      to coding-tuned variants.
+  - type: data
+    title: "Convergent Form, Divergent Voice II — Corpus"
+    authors:
+      - family-names: "Tenner"
+        given-names: "Daniel"
+        orcid: "https://orcid.org/0009-0007-0205-4802"
+      - family-names: "Tenner"
+        given-names: "Lume"
+    year: 2026
+    doi: "10.5281/zenodo.20022111"
+    notes: >
+      The companion data corpus, v1.0.2 (this paper's reference
+      version). Concept DOI 10.5281/zenodo.20013518 resolves to the
+      latest deposited version. All numerical claims in this paper
+      are reproducible from the released corpus; the relevant subset
+      is the four Z.ai GLM cells and the 24 OpenAI Group F trace
+      directories (gpt-5/5.1/5.2/5.3 each paired with its codex
+      sibling, three rounds of n=25 per cell).
+  - type: article
+    title: "Per-Provider Effects in Open-Weights LLM Routing: OpenRouter Is Null for Closed-Weights but Multi-Provider for Open-Weights"
+    authors:
+      - family-names: "Tenner"
+        given-names: "Daniel"
+        orcid: "https://orcid.org/0009-0007-0205-4802"
+      - family-names: "Tenner"
+        given-names: "Lume"
+    year: 2026
+    doi: "10.5281/zenodo.20028572"
+    notes: >
+      Companion paper. Establishes the routing-layer confound that
+      affects the GLM general-vs-coding-direct comparisons in this
+      paper.
