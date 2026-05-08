@@ -8,9 +8,8 @@ Usage:
     python3 length_check.py
 
 Output: per-pair table with (general LONG mean chars, coding LONG mean
-chars, percentage difference). Reads trace data from the corpus
-checkout at ../../contemplative-essayist-probe-v2/data/traces_freeflow/
-or via the symlinked data/ directory if present.
+chars, percentage difference). Reads trace data from the canonical
+corpus repo at ../../contemplative-essayist-corpus-v2/data/traces_freeflow/.
 """
 import json
 import os
@@ -19,7 +18,7 @@ from pathlib import Path
 from statistics import mean
 
 CORPUS_TRACES = Path(
-    "/Users/danieltenner/dev/contemplative-essayist-probe-v2/data/traces_freeflow"
+    "/Users/danieltenner/dev/contemplative-essayist-corpus-v2/data/traces_freeflow"
 )
 
 

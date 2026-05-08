@@ -23,7 +23,7 @@ from pathlib import Path
 from statistics import mean
 
 CORPUS_TRACES = Path(
-    "/Users/danieltenner/dev/contemplative-essayist-probe-v2/data/traces_freeflow"
+    "/Users/danieltenner/dev/contemplative-essayist-corpus-v2/data/traces_freeflow"
 )
 
 PATTERNS = {
